@@ -1,0 +1,87 @@
+[
+  {
+    "id": "italian-game",
+    "name": "Italian Game",
+    "eco": "C50",
+    "moves": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5", "c3", "Nf6", "d3"],
+    "description": "A classical open game where White develops rapidly and fights for central control while aiming for flexible kingside activity.",
+    "ideas": [
+      "Pressure the e5 and f7 squares with quick piece development",
+      "Prepare d4 or a later kingside attack after solid setup",
+      "Keep the bishop on c4 active against the black king"
+    ],
+    "commonMistakes": [
+      "Playing too slowly and allowing Black to equalize comfortably",
+      "Pushing d4 before White is fully prepared to recapture",
+      "Ignoring tactical ideas on f2 and c3 when the center opens"
+    ]
+  },
+  {
+    "id": "london-system",
+    "name": "London System",
+    "eco": "D02",
+    "moves": ["d4", "d5", "Nf3", "Nf6", "Bf4", "e6", "e3", "Bd6", "Bg3"],
+    "description": "A dependable setup for White built around dark-square control, easy development, and a resilient pawn structure.",
+    "ideas": [
+      "Build a compact center and develop quickly without deep theory",
+      "Use the bishop pair and knight jumps to pressure e5 and c5",
+      "Transition smoothly into a kingside attack or minority-style play"
+    ],
+    "commonMistakes": [
+      "Letting the dark-squared bishop get traded without a reason",
+      "Neglecting central breaks with c4 or e4 when the position calls for them",
+      "Overcommitting on the kingside before finishing development"
+    ]
+  },
+  {
+    "id": "french-defense",
+    "name": "French Defense",
+    "eco": "C00",
+    "moves": ["e4", "e6", "d4", "d5", "Nc3", "Nf6", "Bg5", "Be7"],
+    "description": "Black challenges White's center from a solid structure and looks to strike back against the d4 and e4 pawns.",
+    "ideas": [
+      "Undermine White's center with c5 and timely piece pressure",
+      "Use the e4 target to restrict White's space advantage",
+      "Develop patiently before counterattacking on the queenside"
+    ],
+    "commonMistakes": [
+      "Locking the position without a clear break plan",
+      "Delaying c5 and allowing White to keep a free space edge",
+      "Misplacing the light-squared bishop where it has no future"
+    ]
+  },
+  {
+    "id": "sicilian-defense",
+    "name": "Sicilian Defense",
+    "eco": "B50",
+    "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6"],
+    "description": "A sharp counterattacking response to e4 where Black fights for asymmetry and active piece play from move one.",
+    "ideas": [
+      "Contest d4 and build queenside play with ...a6 and ...b5 ideas",
+      "Use the c-file and central pressure to challenge White's initiative",
+      "Create imbalanced positions that reward active calculation"
+    ],
+    "commonMistakes": [
+      "Ignoring development while chasing flank pawn moves",
+      "Allowing White an easy e5 push without counterplay",
+      "Forgetting tactical shots on d6, b5, or e6 in open Sicilian structures"
+    ]
+  },
+  {
+    "id": "queens-gambit",
+    "name": "Queen's Gambit",
+    "eco": "D06",
+    "moves": ["d4", "d5", "c4", "e6", "Nc3", "Nf6", "Bg5", "Be7"],
+    "description": "A strategic opening where White offers the c-pawn to challenge the center and build long-term queenside pressure.",
+    "ideas": [
+      "Use the c4 pawn break to question Black's d5 center",
+      "Develop harmoniously and pressure c- and e-file weaknesses",
+      "Convert space and piece activity into a favorable middlegame"
+    ],
+    "commonMistakes": [
+      "Recovering the gambit pawn too eagerly and losing activity",
+      "Leaving the queen's bishop blocked for too long",
+      "Underestimating Black's freeing ...c5 break"
+    ]
+  }
+]
