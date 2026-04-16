@@ -6,6 +6,7 @@ import type { Square } from 'chess.js'
 import {
   BOARD_SQUARES,
   type HeatmapMode,
+  type PiecePlacement,
   type PositionSnapshot,
   type SquareControl,
   squareToCoordinates,
@@ -20,6 +21,17 @@ interface ChessHeatmapBoardProps {
 }
 
 const BOARD_MARGIN = 28
+
+interface BoardSquareDatum {
+  square: Square
+  x: number
+  y: number
+  coordinates: {
+    x: number
+    y: number
+  }
+  control: SquareControl
+}
 
 const PIECE_GLYPHS = {
   w: {
@@ -57,6 +69,8 @@ export function ChessHeatmapBoard({
     const totalSize = size + BOARD_MARGIN * 2
     const squareSize = size / 8
     const svg = d3.select(svgRef.current)
+    const fileLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] as const
+    const rankLabels = ['8', '7', '6', '5', '4', '3', '2', '1'] as const
 
     svg.selectAll('*').remove()
     svg.attr('viewBox', `0 0 ${totalSize} ${totalSize}`)
@@ -65,7 +79,7 @@ export function ChessHeatmapBoard({
       .append('g')
       .attr('transform', `translate(${BOARD_MARGIN}, ${BOARD_MARGIN})`)
 
-    const boardSquares = BOARD_SQUARES.map((square) => {
+    const boardSquares: BoardSquareDatum[] = BOARD_SQUARES.map((square) => {
       const coordinates = squareToCoordinates(square)
       const displayRank = 7 - coordinates.y
       const control = snapshot.controlMap[square]
@@ -126,11 +140,11 @@ export function ChessHeatmapBoard({
       .enter()
       .append('rect')
       .attr('class', 'board-square')
-      .attr('x', (datum) => datum.x)
-      .attr('y', (datum) => datum.y)
+      .attr('x', (datum: BoardSquareDatum) => datum.x)
+      .attr('y', (datum: BoardSquareDatum) => datum.y)
       .attr('width', squareSize)
       .attr('height', squareSize)
-      .attr('fill', (datum) =>
+      .attr('fill', (datum: BoardSquareDatum) =>
         (datum.coordinates.x + datum.coordinates.y) % 2 === 0 ? '#f5efe4' : '#b9b39b',
       )
 
@@ -140,12 +154,12 @@ export function ChessHeatmapBoard({
       .enter()
       .append('rect')
       .attr('class', 'heat-square')
-      .attr('x', (datum) => datum.x)
-      .attr('y', (datum) => datum.y)
+      .attr('x', (datum: BoardSquareDatum) => datum.x)
+      .attr('y', (datum: BoardSquareDatum) => datum.y)
       .attr('width', squareSize)
       .attr('height', squareSize)
-      .attr('fill', (datum) => getSquareFill(datum.control))
-      .attr('opacity', (datum) => getSquareOpacity(datum.control))
+      .attr('fill', (datum: BoardSquareDatum) => getSquareFill(datum.control))
+      .attr('opacity', (datum: BoardSquareDatum) => getSquareOpacity(datum.control))
 
     root
       .selectAll('rect.hovered-square')
@@ -153,8 +167,8 @@ export function ChessHeatmapBoard({
       .enter()
       .append('rect')
       .attr('class', 'hovered-square')
-      .attr('x', (datum) => datum.x + 2)
-      .attr('y', (datum) => datum.y + 2)
+      .attr('x', (datum: BoardSquareDatum) => datum.x + 2)
+      .attr('y', (datum: BoardSquareDatum) => datum.y + 2)
       .attr('width', squareSize - 4)
       .attr('height', squareSize - 4)
       .attr('rx', 10)
@@ -165,31 +179,31 @@ export function ChessHeatmapBoard({
 
     root
       .selectAll('text.file-label')
-      .data(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'])
+      .data(fileLabels)
       .enter()
       .append('text')
       .attr('class', 'file-label')
-      .attr('x', (_, index) => index * squareSize + squareSize / 2)
+      .attr('x', (_: string, index: number) => index * squareSize + squareSize / 2)
       .attr('y', size + 18)
       .attr('text-anchor', 'middle')
       .attr('font-size', squareSize * 0.18)
       .attr('font-weight', 700)
       .attr('fill', '#4b5563')
-      .text((label) => label)
+      .text((label: string) => label)
 
     root
       .selectAll('text.rank-label')
-      .data(['8', '7', '6', '5', '4', '3', '2', '1'])
+      .data(rankLabels)
       .enter()
       .append('text')
       .attr('class', 'rank-label')
       .attr('x', -12)
-      .attr('y', (_, index) => index * squareSize + squareSize / 2 + 5)
+      .attr('y', (_: string, index: number) => index * squareSize + squareSize / 2 + 5)
       .attr('text-anchor', 'middle')
       .attr('font-size', squareSize * 0.18)
       .attr('font-weight', 700)
       .attr('fill', '#4b5563')
-      .text((label) => label)
+      .text((label: string) => label)
 
     root
       .append('g')
@@ -198,20 +212,30 @@ export function ChessHeatmapBoard({
       .enter()
       .append('text')
       .attr('class', 'piece')
-      .attr('x', (piece) => squareToCoordinates(piece.square).x * squareSize + squareSize / 2)
+      .attr(
+        'x',
+        (piece: PiecePlacement) =>
+          squareToCoordinates(piece.square).x * squareSize + squareSize / 2,
+      )
       .attr(
         'y',
-        (piece) =>
+        (piece: PiecePlacement) =>
           (7 - squareToCoordinates(piece.square).y) * squareSize + squareSize * 0.69,
       )
       .attr('text-anchor', 'middle')
       .attr('font-size', squareSize * 0.76)
       .attr('font-family', 'Georgia, serif')
-      .attr('fill', (piece) => (piece.color === 'w' ? '#fff7ed' : '#111827'))
-      .attr('stroke', (piece) => (piece.color === 'w' ? '#1f2937' : '#f9fafb'))
+      .attr(
+        'fill',
+        (piece: PiecePlacement) => (piece.color === 'w' ? '#fff7ed' : '#111827'),
+      )
+      .attr(
+        'stroke',
+        (piece: PiecePlacement) => (piece.color === 'w' ? '#1f2937' : '#f9fafb'),
+      )
       .attr('stroke-width', 0.6)
       .attr('paint-order', 'stroke')
-      .text((piece) => PIECE_GLYPHS[piece.color][piece.type])
+      .text((piece: PiecePlacement) => PIECE_GLYPHS[piece.color][piece.type])
 
     root
       .selectAll('rect.hit-area')
@@ -219,13 +243,13 @@ export function ChessHeatmapBoard({
       .enter()
       .append('rect')
       .attr('class', 'hit-area')
-      .attr('x', (datum) => datum.x)
-      .attr('y', (datum) => datum.y)
+      .attr('x', (datum: BoardSquareDatum) => datum.x)
+      .attr('y', (datum: BoardSquareDatum) => datum.y)
       .attr('width', squareSize)
       .attr('height', squareSize)
       .attr('fill', 'transparent')
       .style('cursor', 'crosshair')
-      .on('mouseenter', (_, datum) => {
+      .on('mouseenter', (_: MouseEvent, datum: BoardSquareDatum) => {
         onHoverSquare?.(datum.control)
       })
       .on('mouseleave', () => {
