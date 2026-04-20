@@ -304,11 +304,11 @@ function App() {
         let score = 1
 
         if (pieceEmphasisMode === 'continuation') {
-          score = 0.35 + continuationScore * 0.65
+          score = 0.18 + continuationScore * 0.82
         } else if (pieceEmphasisMode === 'control') {
-          score = 0.35 + controlScore * 0.65
+          score = 0.18 + controlScore * 0.82
         } else if (pieceEmphasisMode === 'both') {
-          score = 0.35 + ((continuationScore + controlScore) / 2) * 0.65
+          score = 0.18 + ((continuationScore + controlScore) / 2) * 0.82
         }
 
         return [piece.square, score]

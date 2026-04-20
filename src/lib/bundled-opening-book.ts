@@ -94,7 +94,7 @@ const SEEDED_BOOKS: SeedOpeningBook[] = [
           { move: 'c4b5', total: 170, profile: 'whiteEdge' },
           { move: 'e1g1', total: 120, profile: 'balanced' },
           { move: 'b1d2', total: 90, profile: 'balanced' },
-          { move: 'e4e5', total: 70, profile: 'whiteEdge' },
+          { move: 'd3d4', total: 70, profile: 'whiteEdge' },
         ],
       },
       {
