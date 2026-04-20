@@ -242,23 +242,22 @@ function App() {
       if (legalMove) {
         scores[legalMove.from] = (scores[legalMove.from] ?? 0) + move.percentage
         maxScore = Math.max(maxScore, scores[legalMove.from] ?? 0)
-      }
+        for (const child of move.children) {
+          const childChess = createChessFromOpening(selectedOpening, userMoves)
 
-      for (const child of move.children) {
-        const childChess = createChessFromOpening(selectedOpening, userMoves)
+          if (!applyUciMove(childChess, move.uci)) {
+            continue
+          }
 
-        if (!applyUciMove(childChess, move.uci)) {
-          continue
-        }
+          const childSnapshot = buildPositionSnapshotFromChess(childChess)
+          const childMove = childSnapshot.legalMoves.find(
+            (candidate) => candidate.uci === child.uci,
+          )
 
-        const childSnapshot = buildPositionSnapshotFromChess(childChess)
-        const childMove = childSnapshot.legalMoves.find(
-          (candidate) => candidate.uci === child.uci,
-        )
-
-        if (childMove) {
-          scores[childMove.from] = (scores[childMove.from] ?? 0) + child.percentage
-          maxScore = Math.max(maxScore, scores[childMove.from] ?? 0)
+          if (childMove) {
+            scores[childMove.from] = (scores[childMove.from] ?? 0) + child.percentage
+            maxScore = Math.max(maxScore, scores[childMove.from] ?? 0)
+          }
         }
       }
     }

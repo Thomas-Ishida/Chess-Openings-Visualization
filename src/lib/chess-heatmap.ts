@@ -220,11 +220,15 @@ export function applyUciMove(chess: Chess, uci: string): Move | null {
   const to = uci.slice(2, 4) as Square
   const promotion = uci.slice(4, 5)
 
-  return chess.move({
-    from,
-    to,
-    promotion: promotion ? (promotion as PieceSymbol) : undefined,
-  })
+  try {
+    return chess.move({
+      from,
+      to,
+      promotion: promotion ? (promotion as PieceSymbol) : undefined,
+    })
+  } catch {
+    return null
+  }
 }
 
 export function getLegalMovesForSquare(
