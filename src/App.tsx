@@ -407,7 +407,9 @@ function App() {
             <strong>{inBook ? 'In book' : 'Out of book'}</strong>
             <span>
               {inBook
-                ? 'Continuation probabilities come from real-game book data.'
+                ? bookData?.source === 'book'
+                  ? 'Continuation probabilities come from the live real-game explorer.'
+                  : 'Continuation probabilities come from the bundled opening-book fallback.'
                 : 'Showing engine suggestions because the position is outside the book.'}
             </span>
           </div>
@@ -604,7 +606,9 @@ function App() {
                 {bookStatus === 'loading'
                   ? 'Loading book data'
                   : inBook
-                    ? 'In book'
+                    ? bookData?.source === 'book'
+                      ? 'Live book'
+                      : 'Bundled book'
                     : 'Out of book'}
               </span>
             </div>

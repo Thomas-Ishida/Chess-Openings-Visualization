@@ -1,6 +1,10 @@
 import { Chess, type Square } from 'chess.js'
 
 import type { OpeningDefinition } from './chess-heatmap'
+import {
+  getBundledBookPosition,
+  type BundledExplorerMove,
+} from './bundled-opening-book'
 
 const OPENING_EXPLORER_BASE_URL = 'https://explorer.lichess.ovh'
 const CLOUD_EVAL_BASE_URL = 'https://lichess.org/api/cloud-eval'
@@ -94,14 +98,14 @@ export async function fetchBookContinuations(
   )
 
   if (!explorerResponse) {
-    return null
+    return getBundledBookContinuations(fen, rootLine, depth, moveLimit)
   }
 
   const totalGames =
     explorerResponse.white + explorerResponse.draws + explorerResponse.black
 
   if (totalGames === 0 || explorerResponse.moves.length === 0) {
-    return null
+    return getBundledBookContinuations(fen, rootLine, depth, moveLimit)
   }
 
   const moves = await Promise.all(
@@ -142,7 +146,11 @@ export async function fetchEngineSuggestions(
 
   const payload = (await response.json()) as CloudEvalResponse
   const suggestions = payload.pvs.map((variation) => {
-    const line = variation.moves.split(' ').filter(Boolean)
+    const line = variation.moves
+      .split(' ')
+      .filter(Boolean)
+      .map((uciMove) => normalizeCloudEvalMove(fen, uciMove))
+      .filter((uciMove): uciMove is string => Boolean(uciMove))
     const resultingFen = applyUciMoves(fen, line)
 
     return {
@@ -177,6 +185,34 @@ export function buildInitialMoveHistory(opening: OpeningDefinition): string[] {
   }
 
   return history
+}
+
+function getBundledBookContinuations(
+  fen: string,
+  rootLine: string[],
+  depth: number,
+  moveLimit: number,
+): BookLookupResult | null {
+  const bundled = getBundledBookPosition(fen)
+
+  if (!bundled || bundled.moves.length === 0) {
+    return null
+  }
+
+  const totalGames = bundled.white + bundled.draws + bundled.black
+
+  return {
+    source: 'book',
+    openingName: bundled.openingName,
+    eco: bundled.eco,
+    white: bundled.white,
+    draws: bundled.draws,
+    black: bundled.black,
+    totalGames,
+    moves: bundled.moves.slice(0, moveLimit).map((move) =>
+      buildBundledContinuation(move, rootLine, totalGames, depth - 1, moveLimit),
+    ),
+  }
 }
 
 async function fetchExplorerNode(
@@ -277,4 +313,89 @@ function applyUciMoves(startingFen: string, uciMoves: string[]): string {
   }
 
   return chess.fen()
+}
+
+function buildBundledContinuation(
+  move: BundledExplorerMove,
+  rootLine: string[],
+  totalGames: number,
+  remainingDepth: number,
+  moveLimit: number,
+): ContinuationMove {
+  const nextLine = [...rootLine, move.san]
+  const gameCount = move.white + move.draws + move.black
+
+  return {
+    san: move.san,
+    uci: move.uci,
+    white: move.white,
+    draws: move.draws,
+    black: move.black,
+    gameCount,
+    percentage: totalGames > 0 ? (gameCount / totalGames) * 100 : 0,
+    resultingFen: move.resultingFen,
+    line: nextLine,
+    children:
+      remainingDepth > 0
+        ? move.children
+            .slice(0, moveLimit)
+            .map((child) =>
+              buildBundledContinuation(
+                child,
+                nextLine,
+                gameCount || 1,
+                remainingDepth - 1,
+                moveLimit,
+              ),
+            )
+        : [],
+  }
+}
+
+function normalizeCloudEvalMove(startingFen: string, uciMove: string): string | null {
+  if (uciMove.length >= 4 && !isCastlingLikeMove(uciMove)) {
+    return uciMove
+  }
+
+  const chess = new Chess(startingFen)
+  const castlingMoves = chess.moves({ verbose: true }).filter((move) =>
+    move.san.startsWith('O-O'),
+  )
+
+  if (!isCastlingLikeMove(uciMove)) {
+    return uciMove.length >= 4 ? uciMove : null
+  }
+
+  if (castlingMoves.length === 0) {
+    return null
+  }
+
+  const isKingside = uciMove.endsWith('h8') || uciMove.endsWith('h1')
+  const isQueenside = uciMove.endsWith('a8') || uciMove.endsWith('a1')
+
+  const kingsideMove = castlingMoves.find(
+    (move) => move.san.startsWith('O-O') && !move.san.startsWith('O-O-O'),
+  )
+  const queensideMove = castlingMoves.find((move) => move.san.startsWith('O-O-O'))
+
+  if (isKingside && kingsideMove) {
+    return `${kingsideMove.from}${kingsideMove.to}`
+  }
+
+  if (isQueenside && queensideMove) {
+    return `${queensideMove.from}${queensideMove.to}`
+  }
+
+  const exactCastle = chess.moves({ verbose: true }).find((move) => `${move.from}${move.to}` === uciMove)
+
+  return exactCastle ? `${exactCastle.from}${exactCastle.to}` : null
+}
+
+function isCastlingLikeMove(uciMove: string): boolean {
+  return (
+    uciMove === 'e1h1' ||
+    uciMove === 'e1a1' ||
+    uciMove === 'e8h8' ||
+    uciMove === 'e8a8'
+  )
 }
