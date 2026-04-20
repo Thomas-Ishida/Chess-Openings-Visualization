@@ -18,6 +18,10 @@ interface ChessHeatmapBoardProps {
   size?: number
   hoveredSquare: Square | null
   onHoverSquare?: (square: SquareControl | null) => void
+  selectedSquare?: Square | null
+  legalTargets?: Square[]
+  onSelectSquare?: (square: Square) => void
+  pieceEmphasisMap?: Partial<Record<Square, number>>
 }
 
 const BOARD_MARGIN = 28
@@ -31,6 +35,12 @@ interface BoardSquareDatum {
     y: number
   }
   control: SquareControl
+}
+
+interface PieceDatum extends PiecePlacement {
+  displayX: number
+  displayY: number
+  emphasis: number
 }
 
 const PIECE_GLYPHS = {
@@ -58,6 +68,10 @@ export function ChessHeatmapBoard({
   size = 580,
   hoveredSquare,
   onHoverSquare,
+  selectedSquare = null,
+  legalTargets = [],
+  onSelectSquare,
+  pieceEmphasisMap = {},
 }: ChessHeatmapBoardProps) {
   const svgRef = useRef<SVGSVGElement | null>(null)
 
@@ -90,6 +104,17 @@ export function ChessHeatmapBoard({
         y: displayRank * squareSize,
         coordinates,
         control,
+      }
+    })
+    const legalTargetSet = new Set(legalTargets)
+    const pieceData: PieceDatum[] = snapshot.pieces.map((piece) => {
+      const coordinates = squareToCoordinates(piece.square)
+
+      return {
+        ...piece,
+        displayX: coordinates.x * squareSize + squareSize / 2,
+        displayY: (7 - coordinates.y) * squareSize + squareSize * 0.69,
+        emphasis: pieceEmphasisMap[piece.square] ?? 0.78,
       }
     })
 
@@ -162,20 +187,38 @@ export function ChessHeatmapBoard({
       .attr('opacity', (datum: BoardSquareDatum) => getSquareOpacity(datum.control))
 
     root
-      .selectAll('rect.hovered-square')
-      .data(boardSquares.filter((datum) => datum.square === hoveredSquare))
+      .selectAll('rect.active-square')
+      .data(
+        boardSquares.filter(
+          (datum) => datum.square === hoveredSquare || datum.square === selectedSquare,
+        ),
+      )
       .enter()
       .append('rect')
-      .attr('class', 'hovered-square')
+      .attr('class', 'active-square')
       .attr('x', (datum: BoardSquareDatum) => datum.x + 2)
       .attr('y', (datum: BoardSquareDatum) => datum.y + 2)
       .attr('width', squareSize - 4)
       .attr('height', squareSize - 4)
       .attr('rx', 10)
       .attr('fill', 'none')
-      .attr('stroke', '#111827')
+      .attr('stroke', (datum: BoardSquareDatum) =>
+        datum.square === selectedSquare ? '#2563eb' : '#111827',
+      )
       .attr('stroke-width', 3)
       .attr('stroke-opacity', 0.8)
+
+    root
+      .selectAll('circle.legal-target')
+      .data(boardSquares.filter((datum) => legalTargetSet.has(datum.square)))
+      .enter()
+      .append('circle')
+      .attr('class', 'legal-target')
+      .attr('cx', (datum: BoardSquareDatum) => datum.x + squareSize / 2)
+      .attr('cy', (datum: BoardSquareDatum) => datum.y + squareSize / 2)
+      .attr('r', squareSize * 0.16)
+      .attr('fill', '#0f172a')
+      .attr('opacity', 0.48)
 
     root
       .selectAll('text.file-label')
@@ -208,34 +251,24 @@ export function ChessHeatmapBoard({
     root
       .append('g')
       .selectAll('text.piece')
-      .data(snapshot.pieces)
+      .data(pieceData)
       .enter()
       .append('text')
       .attr('class', 'piece')
-      .attr(
-        'x',
-        (piece: PiecePlacement) =>
-          squareToCoordinates(piece.square).x * squareSize + squareSize / 2,
-      )
-      .attr(
-        'y',
-        (piece: PiecePlacement) =>
-          (7 - squareToCoordinates(piece.square).y) * squareSize + squareSize * 0.69,
-      )
+      .attr('x', (piece: PieceDatum) => piece.displayX)
+      .attr('y', (piece: PieceDatum) => piece.displayY)
       .attr('text-anchor', 'middle')
       .attr('font-size', squareSize * 0.76)
       .attr('font-family', 'Georgia, serif')
-      .attr(
-        'fill',
-        (piece: PiecePlacement) => (piece.color === 'w' ? '#fff7ed' : '#111827'),
+      .attr('fill', (piece: PieceDatum) => (piece.color === 'w' ? '#fff7ed' : '#111827'))
+      .attr('stroke', (piece: PieceDatum) => (piece.color === 'w' ? '#1f2937' : '#f9fafb'))
+      .attr('stroke-width', (piece: PieceDatum) =>
+        piece.square === selectedSquare ? 1.2 : 0.6,
       )
-      .attr(
-        'stroke',
-        (piece: PiecePlacement) => (piece.color === 'w' ? '#1f2937' : '#f9fafb'),
-      )
-      .attr('stroke-width', 0.6)
+      .attr('fill-opacity', (piece: PieceDatum) => piece.emphasis)
+      .attr('stroke-opacity', (piece: PieceDatum) => Math.min(piece.emphasis + 0.15, 1))
       .attr('paint-order', 'stroke')
-      .text((piece: PiecePlacement) => PIECE_GLYPHS[piece.color][piece.type])
+      .text((piece: PieceDatum) => PIECE_GLYPHS[piece.color][piece.type])
 
     root
       .selectAll('rect.hit-area')
@@ -248,12 +281,15 @@ export function ChessHeatmapBoard({
       .attr('width', squareSize)
       .attr('height', squareSize)
       .attr('fill', 'transparent')
-      .style('cursor', 'crosshair')
+      .style('cursor', onSelectSquare ? 'pointer' : 'crosshair')
       .on('mouseenter', (_: MouseEvent, datum: BoardSquareDatum) => {
         onHoverSquare?.(datum.control)
       })
       .on('mouseleave', () => {
         onHoverSquare?.(null)
+      })
+      .on('click', (_: MouseEvent, datum: BoardSquareDatum) => {
+        onSelectSquare?.(datum.square)
       })
 
     function getSquareFill(control: SquareControl) {
@@ -279,7 +315,17 @@ export function ChessHeatmapBoard({
 
       return differenceOpacityScale(Math.abs(control.difference))
     }
-  }, [hoveredSquare, mode, onHoverSquare, size, snapshot])
+  }, [
+    hoveredSquare,
+    legalTargets,
+    mode,
+    onHoverSquare,
+    onSelectSquare,
+    pieceEmphasisMap,
+    selectedSquare,
+    size,
+    snapshot,
+  ])
 
   return (
     <svg

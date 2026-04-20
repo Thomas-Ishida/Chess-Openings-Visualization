@@ -1,4 +1,10 @@
-import { Chess, type Color, type PieceSymbol, type Square } from 'chess.js'
+import {
+  Chess,
+  type Color,
+  type Move,
+  type PieceSymbol,
+  type Square,
+} from 'chess.js'
 
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] as const
 const RANKS = ['1', '2', '3', '4', '5', '6', '7', '8'] as const
@@ -8,6 +14,7 @@ export const BOARD_SQUARES = RANKS.flatMap((rank) =>
 )
 
 export type HeatmapMode = 'white' | 'black' | 'difference'
+export type PieceEmphasisMode = 'off' | 'continuation' | 'control' | 'both'
 
 export interface OpeningDefinition {
   id: string
@@ -47,11 +54,22 @@ export interface PositionSnapshot {
   turn: Color
   fullmoveNumber: number
   pieces: PiecePlacement[]
+  legalMoves: LegalMoveSummary[]
   controlMap: Record<Square, SquareControl>
   controls: SquareControl[]
   maxWhiteControl: number
   maxBlackControl: number
   maxAbsDifference: number
+}
+
+export interface LegalMoveSummary {
+  from: Square
+  to: Square
+  san: string
+  uci: string
+  color: Color
+  piece: PieceSymbol
+  promotion?: PieceSymbol
 }
 
 interface Coordinates {
@@ -106,6 +124,20 @@ export function buildPositionSnapshot(opening: OpeningDefinition): PositionSnaps
     }
   }
 
+  return buildPositionSnapshotFromChess(chess)
+}
+
+export function buildPositionSnapshotFromChess(chess: Chess): PositionSnapshot {
+  const legalMoves = (chess.moves({ verbose: true }) as Move[]).map((move) => ({
+    from: move.from,
+    to: move.to,
+    san: move.san,
+    uci: toUci(move),
+    color: move.color,
+    piece: move.piece,
+    promotion: move.promotion,
+  }))
+
   const pieces = getPiecePlacements(chess)
   const controlMap = createEmptyControlMap()
 
@@ -142,10 +174,11 @@ export function buildPositionSnapshot(opening: OpeningDefinition): PositionSnaps
 
   return {
     fen: chess.fen(),
-    moveSequence: opening.moves,
+    moveSequence: chess.history(),
     turn: chess.turn(),
     fullmoveNumber: chess.moveNumber(),
     pieces,
+    legalMoves,
     controlMap,
     controls,
     maxWhiteControl: Math.max(...controls.map((control) => control.whiteCount), 0),
@@ -155,6 +188,50 @@ export function buildPositionSnapshot(opening: OpeningDefinition): PositionSnaps
       0,
     ),
   }
+}
+
+export function createChessFromOpening(
+  opening: OpeningDefinition,
+  userMoves: string[] = [],
+): Chess {
+  const chess = new Chess()
+
+  for (const move of opening.moves) {
+    const result = chess.move(move)
+
+    if (!result) {
+      throw new Error(`Unable to apply move "${move}" for ${opening.name}.`)
+    }
+  }
+
+  for (const move of userMoves) {
+    const result = applyUciMove(chess, move)
+
+    if (!result) {
+      throw new Error(`Unable to apply user move "${move}" for ${opening.name}.`)
+    }
+  }
+
+  return chess
+}
+
+export function applyUciMove(chess: Chess, uci: string): Move | null {
+  const from = uci.slice(0, 2) as Square
+  const to = uci.slice(2, 4) as Square
+  const promotion = uci.slice(4, 5)
+
+  return chess.move({
+    from,
+    to,
+    promotion: promotion ? (promotion as PieceSymbol) : undefined,
+  })
+}
+
+export function getLegalMovesForSquare(
+  snapshot: PositionSnapshot,
+  square: Square,
+): LegalMoveSummary[] {
+  return snapshot.legalMoves.filter((move) => move.from === square)
 }
 
 export function formatMoveLine(moves: string[]): string {
@@ -178,6 +255,10 @@ export function describePiece(type: PieceSymbol): string {
   }
 
   return names[type]
+}
+
+export function toUci(move: Pick<Move, 'from' | 'to' | 'promotion'>): string {
+  return `${move.from}${move.to}${move.promotion ?? ''}`
 }
 
 export function squareToCoordinates(square: Square): Coordinates {
