@@ -147,60 +147,9 @@ function App() {
       </section>
 
       <main className="content-grid">
-        <section className="board-column">
-          <div className="board-card">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Control heatmap</p>
-                <h2>{selectedOpening.name}</h2>
-              </div>
-              <div className="fen-block">
-                <span>FEN</span>
-                <code>{snapshot.fen}</code>
-              </div>
-            </div>
 
-            <ChessHeatmapBoard
-              snapshot={snapshot}
-              mode={mode}
-              hoveredSquare={hoveredSquare?.square ?? null}
-              onHoverSquare={setHoveredSquare}
-            />
-
-            <div className="legend">
-              <div className="legend-ramp legend-ramp-blue" aria-hidden="true" />
-              <div className="legend-ramp legend-ramp-neutral" aria-hidden="true" />
-              <div className="legend-ramp legend-ramp-orange" aria-hidden="true" />
-            </div>
-            <div className="legend-labels">
-              <span>White control</span>
-              <span>Neutral balance</span>
-              <span>Black control</span>
-            </div>
-          </div>
-
-          <div className="metric-grid">
-            <article className="metric-card">
-              <span className="metric-label">White coverage</span>
-              <strong>{whiteCoverage} squares</strong>
-              <p>Strongest pressure: {formatSquareList(topWhiteSquares)}</p>
-            </article>
-
-            <article className="metric-card">
-              <span className="metric-label">Black coverage</span>
-              <strong>{blackCoverage} squares</strong>
-              <p>Strongest pressure: {formatSquareList(topBlackSquares)}</p>
-            </article>
-
-            <article className="metric-card">
-              <span className="metric-label">Most contested</span>
-              <strong>{formatSquareList(topContestedSquares)}</strong>
-              <p>Squares with the heaviest combined pressure from both sides.</p>
-            </article>
-          </div>
-        </section>
-
-        <aside className="detail-column">
+        {/* LEFT COLUMN */}
+        <section className="left-column">
           <section className="detail-card">
             <div className="section-heading">
               <div>
@@ -235,7 +184,45 @@ function App() {
               <p className="move-line">{formatMoveLine(selectedOpening.moves)}</p>
             </div>
           </section>
+        </section>
 
+        {/* CENTER COLUMN */}
+        <section className="center-column">
+          <div className="board-card">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Control heatmap</p>
+                <h2>{selectedOpening.name}</h2>
+              </div>
+              <div className="fen-block">
+                <span>FEN</span>
+                <code>{snapshot.fen}</code>
+              </div>
+            </div>
+
+            <ChessHeatmapBoard
+              snapshot={snapshot}
+              mode={mode}
+              hoveredSquare={hoveredSquare?.square ?? null}
+              onHoverSquare={setHoveredSquare}
+            />
+
+            <div className="legend">
+              <div className="legend-ramp legend-ramp-blue" />
+              <div className="legend-ramp legend-ramp-neutral" />
+              <div className="legend-ramp legend-ramp-orange" />
+            </div>
+
+            <div className="legend-labels">
+              <span>White control</span>
+              <span>Neutral balance</span>
+              <span>Black control</span>
+            </div>
+          </div>
+        </section>
+
+        {/* RIGHT COLUMN */}
+        <aside className="right-column">
           <section className="detail-card">
             <div className="section-heading">
               <div>
@@ -243,8 +230,7 @@ function App() {
                 <h2>{hoveredSquare ? hoveredSquare.square : 'Hover any square'}</h2>
               </div>
               <span className="detail-badge subtle">
-                Move {snapshot.fullmoveNumber}, {snapshot.turn === 'w' ? 'White' : 'Black'} to
-                move
+                Move {snapshot.fullmoveNumber}, {snapshot.turn === 'w' ? 'White' : 'Black'} to move
               </span>
             </div>
 
@@ -299,12 +285,31 @@ function App() {
               </div>
             ) : (
               <p className="detail-copy">
-                Hover any square on the board to inspect exactly which pieces are
-                contributing pressure there.
+                Hover any square on the board to inspect exactly which pieces are contributing pressure there.
               </p>
             )}
           </section>
+                    <div className="metric-grid">
+            <article className="metric-card">
+              <span className="metric-label">White coverage</span>
+              <strong>{whiteCoverage} squares</strong>
+              <p>Strongest pressure: {formatSquareList(topWhiteSquares)}</p>
+            </article>
+
+            <article className="metric-card">
+              <span className="metric-label">Black coverage</span>
+              <strong>{blackCoverage} squares</strong>
+              <p>Strongest pressure: {formatSquareList(topBlackSquares)}</p>
+            </article>
+
+            <article className="metric-card">
+              <span className="metric-label">Most contested</span>
+              <strong>{formatSquareList(topContestedSquares)}</strong>
+              <p>Squares with the heaviest combined pressure from both sides.</p>
+            </article>
+          </div>
         </aside>
+
       </main>
     </div>
   )
