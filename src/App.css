@@ -350,6 +350,20 @@
   gap: 0.85rem;
 }
 
+.engine-mode-note {
+  margin-bottom: 1rem;
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  background: rgba(255, 237, 213, 0.55);
+  border: 1px solid rgba(249, 115, 22, 0.18);
+}
+
+.engine-mode-note strong {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: #9a3412;
+}
+
 .continuation-card,
 .analysis-card,
 .status-panel {
@@ -362,6 +376,11 @@
 .continuation-card.active {
   border-color: rgba(37, 99, 235, 0.35);
   box-shadow: 0 12px 24px rgba(37, 99, 235, 0.1);
+}
+
+.analysis-card.selected {
+  border-color: rgba(249, 115, 22, 0.35);
+  box-shadow: 0 12px 24px rgba(249, 115, 22, 0.12);
 }
 
 .card-row,
@@ -402,6 +421,65 @@
 .eval-pill {
   background: rgba(249, 115, 22, 0.12);
   color: #c2410c;
+}
+
+.inline-action {
+  border: 1px solid rgba(249, 115, 22, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #c2410c;
+  font-weight: 700;
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    border-color 120ms ease;
+}
+
+.inline-action:hover {
+  transform: translateY(-1px);
+  border-color: rgba(249, 115, 22, 0.35);
+  box-shadow: 0 10px 18px rgba(249, 115, 22, 0.12);
+}
+
+.engine-preview {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: 1.15rem;
+  background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.engine-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.85rem;
+}
+
+.engine-preview-header h3 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.engine-preview-board {
+  max-width: 360px;
+}
+
+.engine-preview-board .chess-heatmap-board {
+  width: 100%;
+}
+
+.engine-preview-copy {
+  margin-top: 0.75rem;
+}
+
+.engine-preview-copy strong {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: #0f172a;
 }
 
 .move-buttons {
@@ -496,7 +574,8 @@
 
   .board-actions,
   .card-row,
-  .line-row {
+  .line-row,
+  .engine-preview-header {
     flex-direction: column;
     align-items: flex-start;
   }

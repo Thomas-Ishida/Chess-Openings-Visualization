@@ -77,6 +77,7 @@ function App() {
     'idle' | 'loading' | 'ready' | 'unavailable' | 'error'
   >('idle')
   const [engineError, setEngineError] = useState<string | null>(null)
+  const [selectedEngineIndex, setSelectedEngineIndex] = useState(0)
 
   const selectedOpening = useMemo(
     () =>
@@ -113,6 +114,7 @@ function App() {
       setEngineData(null)
       setEngineStatus('idle')
       setEngineError(null)
+      setSelectedEngineIndex(0)
 
       try {
         const result = await fetchBookContinuations(snapshot.fen, currentLine, {
@@ -317,6 +319,31 @@ function App() {
 
   const inBook = Boolean(bookData && bookData.moves.length > 0)
   const canUndo = userMoves.length > 0
+  const selectedEngineSuggestion = useMemo(
+    () => engineData?.suggestions[selectedEngineIndex] ?? engineData?.suggestions[0] ?? null,
+    [engineData, selectedEngineIndex],
+  )
+  const enginePreview = useMemo(() => {
+    if (!selectedEngineSuggestion) {
+      return null
+    }
+
+    const previewChess = createChessFromOpening(selectedOpening, userMoves)
+    const firstMove = applyUciMove(previewChess, selectedEngineSuggestion.uci)
+
+    if (!firstMove) {
+      return null
+    }
+
+    return {
+      snapshot: buildPositionSnapshotFromChess(previewChess),
+      arrow: {
+        from: firstMove.from,
+        to: firstMove.to,
+      },
+      firstMoveSan: firstMove.san,
+    }
+  }, [selectedEngineSuggestion, selectedOpening, userMoves])
 
   function handleSelectSquare(square: Square) {
     const piece = chess.get(square)
@@ -435,6 +462,7 @@ function App() {
                   setEngineData(null)
                   setEngineStatus('idle')
                   setEngineError(null)
+                  setSelectedEngineIndex(0)
                 }}
               >
                 {opening.name}
@@ -662,23 +690,75 @@ function App() {
             ) : engineStatus === 'loading' ? (
               <p className="detail-copy">Requesting cloud engine suggestions.</p>
             ) : engineStatus === 'ready' && engineData ? (
-              <div className="analysis-list">
-                {engineData.suggestions.map((suggestion, index) => (
-                  <article key={`${suggestion.uci}-${index}`} className="analysis-card">
+              <>
+                <div className="engine-mode-note">
+                  <strong>Engine mode</strong>
+                  <p>
+                    This position is outside the opening book, so these are engine
+                    suggestions rather than popularity-based next moves.
+                  </p>
+                </div>
+
+                {enginePreview ? (
+                  <div className="engine-preview-card">
                     <div className="card-row">
                       <div>
-                        <h3>Line {index + 1}</h3>
+                        <h3>Previewing {enginePreview.firstMoveSan}</h3>
                         <p className="detail-copy">
-                          {formatEngineLine(suggestion)}
+                          The arrow shows the first engine move on the board.
                         </p>
                       </div>
                       <span className="eval-pill">
-                        {formatEngineScore(suggestion)}
+                        {selectedEngineSuggestion
+                          ? formatEngineScore(selectedEngineSuggestion)
+                          : 'No eval'}
                       </span>
                     </div>
-                  </article>
-                ))}
-              </div>
+                    <ChessHeatmapBoard
+                      snapshot={enginePreview.snapshot}
+                      mode={mode}
+                      size={360}
+                      hoveredSquare={null}
+                      selectedSquare={null}
+                      legalTargets={[]}
+                      pieceEmphasisMap={{}}
+                      previewArrow={enginePreview.arrow}
+                    />
+                  </div>
+                ) : null}
+
+                <div className="analysis-list">
+                  {engineData.suggestions.map((suggestion, index) => (
+                    <article
+                      key={`${suggestion.uci}-${index}`}
+                      className={`analysis-card ${
+                        index === selectedEngineIndex ? 'active' : ''
+                      }`}
+                    >
+                      <div className="card-row">
+                        <div>
+                          <h3>Line {index + 1}</h3>
+                          <p className="detail-copy">
+                            {formatEngineLine(selectedOpening, userMoves, suggestion)}
+                          </p>
+                        </div>
+                        <span className="eval-pill">
+                          {formatEngineScore(suggestion)}
+                        </span>
+                      </div>
+                      <div className="move-buttons">
+                        <button
+                          type="button"
+                          className="action-button"
+                          onClick={() => setSelectedEngineIndex(index)}
+                        >
+                          Preview line
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </>
             ) : (
               <p className="detail-copy">
                 {engineError ?? 'No cloud evaluation was available for this position.'}
@@ -801,6 +881,23 @@ function formatEngineScore(suggestion: EngineSuggestion): string {
   return 'No eval'
 }
 
-function formatEngineLine(suggestion: EngineSuggestion): string {
-  return suggestion.line.join(' ')
+function formatEngineLine(
+  opening: OpeningDefinition,
+  userMoves: string[],
+  suggestion: EngineSuggestion,
+): string {
+  const chess = createChessFromOpening(opening, userMoves)
+  const sanMoves: string[] = []
+
+  for (const uciMove of suggestion.line) {
+    const move = applyUciMove(chess, uciMove)
+
+    if (!move) {
+      break
+    }
+
+    sanMoves.push(move.san)
+  }
+
+  return sanMoves.length > 0 ? formatMoveLine(sanMoves) : suggestion.line.join(' ')
 }

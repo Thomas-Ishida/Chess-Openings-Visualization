@@ -22,6 +22,11 @@ interface ChessHeatmapBoardProps {
   legalTargets?: Square[]
   onSelectSquare?: (square: Square) => void
   pieceEmphasisMap?: Partial<Record<Square, number>>
+  previewArrow?: {
+    from: Square
+    to: Square
+    color?: string
+  } | null
 }
 
 const BOARD_MARGIN = 28
@@ -72,6 +77,7 @@ export function ChessHeatmapBoard({
   legalTargets = [],
   onSelectSquare,
   pieceEmphasisMap = {},
+  previewArrow = null,
 }: ChessHeatmapBoardProps) {
   const svgRef = useRef<SVGSVGElement | null>(null)
 
@@ -114,7 +120,7 @@ export function ChessHeatmapBoard({
         ...piece,
         displayX: coordinates.x * squareSize + squareSize / 2,
         displayY: (7 - coordinates.y) * squareSize + squareSize * 0.69,
-        emphasis: pieceEmphasisMap[piece.square] ?? 0.78,
+        emphasis: pieceEmphasisMap[piece.square] ?? 1,
       }
     })
 
@@ -220,6 +226,42 @@ export function ChessHeatmapBoard({
       .attr('fill', '#0f172a')
       .attr('opacity', 0.48)
 
+    if (previewArrow) {
+      const from = squareToCoordinates(previewArrow.from)
+      const to = squareToCoordinates(previewArrow.to)
+      const arrowColor = previewArrow.color ?? '#7c3aed'
+      const startX = from.x * squareSize + squareSize / 2
+      const startY = (7 - from.y) * squareSize + squareSize / 2
+      const endX = to.x * squareSize + squareSize / 2
+      const endY = (7 - to.y) * squareSize + squareSize / 2
+
+      const defs = root.append('defs')
+      defs
+        .append('marker')
+        .attr('id', 'preview-arrow-head')
+        .attr('viewBox', '0 0 12 12')
+        .attr('refX', 10)
+        .attr('refY', 6)
+        .attr('markerWidth', 10)
+        .attr('markerHeight', 10)
+        .attr('orient', 'auto-start-reverse')
+        .append('path')
+        .attr('d', 'M 0 0 L 12 6 L 0 12 z')
+        .attr('fill', arrowColor)
+
+      root
+        .append('line')
+        .attr('x1', startX)
+        .attr('y1', startY)
+        .attr('x2', endX)
+        .attr('y2', endY)
+        .attr('stroke', arrowColor)
+        .attr('stroke-width', Math.max(squareSize * 0.12, 6))
+        .attr('stroke-linecap', 'round')
+        .attr('stroke-opacity', 0.72)
+        .attr('marker-end', 'url(#preview-arrow-head)')
+    }
+
     root
       .selectAll('text.file-label')
       .data(fileLabels)
@@ -322,6 +364,7 @@ export function ChessHeatmapBoard({
     onHoverSquare,
     onSelectSquare,
     pieceEmphasisMap,
+    previewArrow,
     selectedSquare,
     size,
     snapshot,
