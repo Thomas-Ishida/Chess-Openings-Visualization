@@ -323,6 +323,15 @@ function App() {
     () => engineData?.suggestions[selectedEngineIndex] ?? engineData?.suggestions[0] ?? null,
     [engineData, selectedEngineIndex],
   )
+  const selectedEngineFirstMove = useMemo(() => {
+    if (!selectedEngineSuggestion) {
+      return null
+    }
+
+    return snapshot.legalMoves.find(
+      (move) => move.uci === selectedEngineSuggestion.uci,
+    ) ?? null
+  }, [selectedEngineSuggestion, snapshot.legalMoves])
   const enginePreview = useMemo(() => {
     if (!selectedEngineSuggestion) {
       return null
@@ -389,6 +398,24 @@ function App() {
     setHoveredSquare(null)
   }
 
+  function handleApplyEngineMove(suggestion: EngineSuggestion) {
+    const legalMove = snapshot.legalMoves.find(
+      (candidate) => candidate.uci === suggestion.uci,
+    )
+
+    if (!legalMove) {
+      setEngineError(
+        'This engine preview is no longer valid for the current board state.',
+      )
+      return
+    }
+
+    setUserMoves((moves) => [...moves, legalMove.uci])
+    setSelectedSquare(null)
+    setHoveredSquare(null)
+    setEngineError(null)
+  }
+
   function handleReset() {
     setUserMoves([])
     setSelectedSquare(null)
@@ -433,7 +460,7 @@ function App() {
             <strong>{inBook ? 'In book' : 'Out of book'}</strong>
             <span>
               {inBook
-                ? bookData?.source === 'book'
+                ? bookData?.source === 'live-book'
                   ? 'Continuation probabilities come from the live real-game explorer.'
                   : 'Continuation probabilities come from the bundled opening-book fallback.'
                 : 'Showing engine suggestions because the position is outside the book.'}
@@ -633,7 +660,7 @@ function App() {
                 {bookStatus === 'loading'
                   ? 'Loading book data'
                   : inBook
-                    ? bookData?.source === 'book'
+                    ? bookData?.source === 'live-book'
                       ? 'Live book'
                       : 'Bundled book'
                     : 'Out of book'}
@@ -697,6 +724,9 @@ function App() {
                     This position is outside the opening book, so these are engine
                     suggestions rather than popularity-based next moves.
                   </p>
+                  <span className="engine-source-label">
+                    Source: {engineData.sourceLabel}
+                  </span>
                 </div>
 
                 {enginePreview ? (
@@ -724,6 +754,20 @@ function App() {
                       pieceEmphasisMap={{}}
                       previewArrow={enginePreview.arrow}
                     />
+                    <div className="move-buttons engine-preview-actions">
+                      <button
+                        type="button"
+                        className="action-button"
+                        onClick={() =>
+                          selectedEngineSuggestion
+                            ? handleApplyEngineMove(selectedEngineSuggestion)
+                            : undefined
+                        }
+                        disabled={!selectedEngineFirstMove}
+                      >
+                        Apply first move
+                      </button>
+                    </div>
                   </div>
                 ) : null}
 
@@ -753,6 +797,13 @@ function App() {
                           onClick={() => setSelectedEngineIndex(index)}
                         >
                           Preview line
+                        </button>
+                        <button
+                          type="button"
+                          className="action-button"
+                          onClick={() => handleApplyEngineMove(suggestion)}
+                        >
+                          Apply first move
                         </button>
                       </div>
                     </article>

@@ -27,6 +27,7 @@ interface ChessHeatmapBoardProps {
     to: Square
     color?: string
   } | null
+  previewDestination?: Square | null
 }
 
 const BOARD_MARGIN = 28
@@ -78,6 +79,7 @@ export function ChessHeatmapBoard({
   onSelectSquare,
   pieceEmphasisMap = {},
   previewArrow = null,
+  previewDestination = null,
 }: ChessHeatmapBoardProps) {
   const svgRef = useRef<SVGSVGElement | null>(null)
 
@@ -226,6 +228,26 @@ export function ChessHeatmapBoard({
       .attr('fill', '#0f172a')
       .attr('opacity', 0.48)
 
+    if (previewDestination) {
+      const destinationSquare = boardSquares.find(
+        (datum) => datum.square === previewDestination,
+      )
+
+      if (destinationSquare) {
+        root
+          .append('rect')
+          .attr('x', destinationSquare.x + 6)
+          .attr('y', destinationSquare.y + 6)
+          .attr('width', squareSize - 12)
+          .attr('height', squareSize - 12)
+          .attr('rx', 10)
+          .attr('fill', 'none')
+          .attr('stroke', '#7c3aed')
+          .attr('stroke-width', 3)
+          .attr('stroke-opacity', 0.55)
+      }
+    }
+
     if (previewArrow) {
       const from = squareToCoordinates(previewArrow.from)
       const to = squareToCoordinates(previewArrow.to)
@@ -240,10 +262,10 @@ export function ChessHeatmapBoard({
         .append('marker')
         .attr('id', 'preview-arrow-head')
         .attr('viewBox', '0 0 12 12')
-        .attr('refX', 10)
+        .attr('refX', 9)
         .attr('refY', 6)
-        .attr('markerWidth', 10)
-        .attr('markerHeight', 10)
+        .attr('markerWidth', 8)
+        .attr('markerHeight', 8)
         .attr('orient', 'auto-start-reverse')
         .append('path')
         .attr('d', 'M 0 0 L 12 6 L 0 12 z')
@@ -256,9 +278,9 @@ export function ChessHeatmapBoard({
         .attr('x2', endX)
         .attr('y2', endY)
         .attr('stroke', arrowColor)
-        .attr('stroke-width', Math.max(squareSize * 0.12, 6))
+        .attr('stroke-width', Math.max(squareSize * 0.07, 3))
         .attr('stroke-linecap', 'round')
-        .attr('stroke-opacity', 0.72)
+        .attr('stroke-opacity', 0.62)
         .attr('marker-end', 'url(#preview-arrow-head)')
     }
 
@@ -365,6 +387,7 @@ export function ChessHeatmapBoard({
     onSelectSquare,
     pieceEmphasisMap,
     previewArrow,
+    previewDestination,
     selectedSquare,
     size,
     snapshot,

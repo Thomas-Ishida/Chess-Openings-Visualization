@@ -25,7 +25,7 @@ export interface ContinuationMove {
 }
 
 export interface BookLookupResult {
-  source: 'book'
+  source: 'live-book' | 'bundled-book'
   openingName?: string
   eco?: string
   white: number
@@ -45,6 +45,7 @@ export interface EngineSuggestion {
 
 export interface EngineLookupResult {
   source: 'engine'
+  sourceLabel: string
   depth: number
   knodes: number
   suggestions: EngineSuggestion[]
@@ -115,7 +116,7 @@ export async function fetchBookContinuations(
   )
 
   return {
-    source: 'book',
+    source: 'live-book',
     openingName: explorerResponse.opening?.name,
     eco: explorerResponse.opening?.eco,
     white: explorerResponse.white,
@@ -164,6 +165,7 @@ export async function fetchEngineSuggestions(
 
   return {
     source: 'engine',
+    sourceLabel: 'Cloud engine evaluation',
     depth: payload.depth,
     knodes: payload.knodes,
     suggestions: suggestions.filter((suggestion) => suggestion.uci !== ''),
@@ -202,7 +204,7 @@ function getBundledBookContinuations(
   const totalGames = bundled.white + bundled.draws + bundled.black
 
   return {
-    source: 'book',
+    source: 'bundled-book',
     openingName: bundled.openingName,
     eco: bundled.eco,
     white: bundled.white,
