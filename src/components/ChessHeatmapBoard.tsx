@@ -28,6 +28,11 @@ interface ChessHeatmapBoardProps {
     color?: string
   } | null
   previewDestination?: Square | null
+  importantSquares?: Array<{
+    square: Square
+    color: string
+    strength: number
+  }>
 }
 
 const BOARD_MARGIN = 28
@@ -80,6 +85,7 @@ export function ChessHeatmapBoard({
   pieceEmphasisMap = {},
   previewArrow = null,
   previewDestination = null,
+  importantSquares = [],
 }: ChessHeatmapBoardProps) {
   const svgRef = useRef<SVGSVGElement | null>(null)
 
@@ -115,6 +121,9 @@ export function ChessHeatmapBoard({
       }
     })
     const legalTargetSet = new Set(legalTargets)
+    const importantSquareMap = new Map(
+      importantSquares.map((entry) => [entry.square, entry]),
+    )
     const pieceData: PieceDatum[] = snapshot.pieces.map((piece) => {
       const coordinates = squareToCoordinates(piece.square)
 
@@ -193,6 +202,31 @@ export function ChessHeatmapBoard({
       .attr('height', squareSize)
       .attr('fill', (datum: BoardSquareDatum) => getSquareFill(datum.control))
       .attr('opacity', (datum: BoardSquareDatum) => getSquareOpacity(datum.control))
+
+    root
+      .selectAll('rect.important-square')
+      .data(boardSquares.filter((datum) => importantSquareMap.has(datum.square)))
+      .enter()
+      .append('rect')
+      .attr('class', 'important-square')
+      .attr('x', (datum: BoardSquareDatum) => datum.x + 4)
+      .attr('y', (datum: BoardSquareDatum) => datum.y + 4)
+      .attr('width', squareSize - 8)
+      .attr('height', squareSize - 8)
+      .attr('rx', 11)
+      .attr('fill', 'none')
+      .attr('stroke', (datum: BoardSquareDatum) =>
+        importantSquareMap.get(datum.square)?.color ?? '#7c3aed',
+      )
+      .attr('stroke-width', (datum: BoardSquareDatum) =>
+        2 + (importantSquareMap.get(datum.square)?.strength ?? 0) * 2.5,
+      )
+      .attr('stroke-opacity', (datum: BoardSquareDatum) =>
+        0.45 + (importantSquareMap.get(datum.square)?.strength ?? 0) * 0.4,
+      )
+      .attr('stroke-dasharray', (datum: BoardSquareDatum) =>
+        (importantSquareMap.get(datum.square)?.strength ?? 0) > 0.72 ? '0' : '8 4',
+      )
 
     root
       .selectAll('rect.active-square')
@@ -381,6 +415,7 @@ export function ChessHeatmapBoard({
     }
   }, [
     hoveredSquare,
+    importantSquares,
     legalTargets,
     mode,
     onHoverSquare,

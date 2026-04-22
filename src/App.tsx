@@ -57,6 +57,14 @@ const EMPHASIS_COPY: Record<PieceEmphasisMode, string> = {
   both: 'Both',
 }
 
+type SuggestionSourceMode = 'auto' | 'statistics' | 'engine'
+
+const SUGGESTION_SOURCE_COPY: Record<SuggestionSourceMode, string> = {
+  auto: 'Auto',
+  statistics: 'Statistics',
+  engine: 'Engine',
+}
+
 function App() {
   const [selectedOpeningId, setSelectedOpeningId] = useState(openings[0].id)
   const [mode, setMode] = useState<HeatmapMode>('white')
@@ -78,6 +86,8 @@ function App() {
   >('idle')
   const [engineError, setEngineError] = useState<string | null>(null)
   const [selectedEngineIndex, setSelectedEngineIndex] = useState(0)
+  const [suggestionSourceMode, setSuggestionSourceMode] =
+    useState<SuggestionSourceMode>('auto')
 
   const selectedOpening = useMemo(
     () =>
@@ -319,6 +329,25 @@ function App() {
 
   const inBook = Boolean(bookData && bookData.moves.length > 0)
   const canUndo = userMoves.length > 0
+  const resolvedSuggestionSource = useMemo(() => {
+    if (suggestionSourceMode === 'statistics') {
+      return inBook ? 'statistics' : 'none'
+    }
+
+    if (suggestionSourceMode === 'engine') {
+      return engineData ? 'engine' : 'none'
+    }
+
+    if (inBook) {
+      return 'statistics'
+    }
+
+    if (engineData) {
+      return 'engine'
+    }
+
+    return 'none'
+  }, [engineData, inBook, suggestionSourceMode])
   const selectedEngineSuggestion = useMemo(
     () => engineData?.suggestions[selectedEngineIndex] ?? engineData?.suggestions[0] ?? null,
     [engineData, selectedEngineIndex],
@@ -353,6 +382,75 @@ function App() {
       firstMoveSan: firstMove.san,
     }
   }, [selectedEngineSuggestion, selectedOpening, userMoves])
+  const importantSquares = useMemo(() => {
+    if (pieceEmphasisMode === 'off') {
+      return []
+    }
+
+    return snapshot.pieces.flatMap((piece) => {
+      const continuationScore = continuationScores[piece.square] ?? 0
+      const controlScore = controlScores[piece.square] ?? 0
+      let strength = 0
+      let color = '#7c3aed'
+
+      if (pieceEmphasisMode === 'continuation') {
+        strength = continuationScore
+        color = '#f97316'
+      } else if (pieceEmphasisMode === 'control') {
+        strength = controlScore
+        color = '#2563eb'
+      } else if (pieceEmphasisMode === 'both') {
+        strength = (continuationScore + controlScore) / 2
+        color = '#7c3aed'
+      }
+
+      if (strength < 0.45) {
+        return []
+      }
+
+      return [
+        {
+          square: piece.square,
+          color,
+          strength,
+        },
+      ]
+    })
+  }, [continuationScores, controlScores, pieceEmphasisMode, snapshot.pieces])
+  const keyPieces = useMemo(() => {
+    const ranked = snapshot.pieces
+      .map((piece) => {
+        const continuationScore = continuationScores[piece.square] ?? 0
+        const controlScore = controlScores[piece.square] ?? 0
+        const score =
+          pieceEmphasisMode === 'continuation'
+            ? continuationScore
+            : pieceEmphasisMode === 'control'
+              ? controlScore
+              : pieceEmphasisMode === 'both'
+                ? (continuationScore + controlScore) / 2
+                : 0
+
+        return {
+          piece,
+          score,
+          continuationScore,
+          controlScore,
+        }
+      })
+      .filter((entry) => entry.score > 0)
+      .sort((left, right) => right.score - left.score)
+
+    return ranked.slice(0, 3)
+  }, [continuationScores, controlScores, pieceEmphasisMode, snapshot.pieces])
+  const keyPieceTitle =
+    pieceEmphasisMode === 'continuation'
+      ? 'Likely movers'
+      : pieceEmphasisMode === 'control'
+        ? 'Most influential pieces'
+        : pieceEmphasisMode === 'both'
+          ? 'Key pieces'
+          : 'Piece emphasis'
 
   function handleSelectSquare(square: Square) {
     const piece = chess.get(square)
@@ -559,6 +657,7 @@ function App() {
               legalTargets={legalTargets}
               onSelectSquare={handleSelectSquare}
               pieceEmphasisMap={pieceEmphasisMap}
+              importantSquares={importantSquares}
             />
 
             <div className="board-actions">
@@ -652,28 +751,54 @@ function App() {
             <div className="section-heading">
               <div>
                 <p className="eyebrow">Continuation explorer</p>
-                <h2>{inBook ? 'Real-game next moves' : 'Engine fallback'}</h2>
+                <h2>Suggestions</h2>
               </div>
               <span
                 className={`detail-badge ${inBook ? 'in-book' : 'out-of-book'}`}
               >
                 {bookStatus === 'loading'
                   ? 'Loading book data'
-                  : inBook
+                  : resolvedSuggestionSource === 'statistics'
                     ? bookData?.source === 'live-book'
                       ? 'Live book'
                       : 'Bundled book'
-                    : 'Out of book'}
+                    : resolvedSuggestionSource === 'engine'
+                      ? 'Engine'
+                      : 'No data'}
               </span>
             </div>
+            <div className="suggestion-toggle" role="tablist" aria-label="Suggestion source">
+              {(Object.keys(SUGGESTION_SOURCE_COPY) as SuggestionSourceMode[]).map((sourceMode) => (
+                <button
+                  key={sourceMode}
+                  type="button"
+                  className={`mode-button ${sourceMode === suggestionSourceMode ? 'active' : ''}`}
+                  onClick={() => setSuggestionSourceMode(sourceMode)}
+                >
+                  {SUGGESTION_SOURCE_COPY[sourceMode]}
+                </button>
+              ))}
+            </div>
 
-            {bookStatus === 'loading' ? (
+            {suggestionSourceMode === 'statistics' && !inBook && bookStatus === 'ready' ? (
+              <p className="detail-copy">
+                No statistical suggestions are available for this position. Switch to Engine
+                or Auto to see engine analysis.
+              </p>
+            ) : suggestionSourceMode === 'engine' &&
+              !engineData &&
+              engineStatus !== 'loading' ? (
+              <p className="detail-copy">
+                No cloud engine evaluation is available for this position. Switch to
+                Statistics or Auto if opening-book data exists.
+              </p>
+            ) : bookStatus === 'loading' && suggestionSourceMode !== 'engine' ? (
               <p className="detail-copy">Looking up real-game continuations for this position.</p>
-            ) : bookStatus === 'error' ? (
+            ) : bookStatus === 'error' && suggestionSourceMode !== 'engine' ? (
               <p className="error-text">
                 {bookError ?? 'The real-game continuation service could not be reached.'}
               </p>
-            ) : inBook && bookData ? (
+            ) : resolvedSuggestionSource === 'statistics' && inBook && bookData ? (
               <div className="continuation-list">
                 {bookData.moves.map((move) => (
                   <article key={move.uci} className="continuation-card">
@@ -714,9 +839,11 @@ function App() {
                   </article>
                 ))}
               </div>
-            ) : engineStatus === 'loading' ? (
+            ) : engineStatus === 'loading' && suggestionSourceMode !== 'statistics' ? (
               <p className="detail-copy">Requesting cloud engine suggestions.</p>
-            ) : engineStatus === 'ready' && engineData ? (
+            ) : resolvedSuggestionSource === 'engine' &&
+              engineStatus === 'ready' &&
+              engineData ? (
               <>
                 <div className="engine-mode-note">
                   <strong>Engine mode</strong>
@@ -812,10 +939,55 @@ function App() {
               </>
             ) : (
               <p className="detail-copy">
-                {engineError ?? 'No cloud evaluation was available for this position.'}
+                {resolvedSuggestionSource === 'engine'
+                  ? engineError ?? 'No cloud evaluation was available for this position.'
+                  : 'No suggestions are available for this position yet.'}
               </p>
             )}
           </section>
+
+          {pieceEmphasisMode !== 'off' ? (
+            <section className="detail-card">
+              <div className="detail-group-header">
+                <h3>{keyPieceTitle}</h3>
+                <span className="source-label blue">
+                  {pieceEmphasisMode === 'continuation'
+                    ? 'Based on likely next moves'
+                    : pieceEmphasisMode === 'control'
+                      ? 'Based on current board control'
+                      : 'Blending move likelihood and control'}
+                </span>
+              </div>
+              {keyPieces.length > 0 ? (
+                <div className="key-piece-list">
+                  {keyPieces.map((entry) => (
+                    <div key={entry.piece.square} className="key-piece-row">
+                      <div className="key-piece-copy">
+                        <strong>
+                          {describePiece(entry.piece.type)} on {entry.piece.square}
+                        </strong>
+                        <span className="detail-copy">
+                          {pieceEmphasisMode === 'continuation'
+                            ? `${(entry.continuationScore * 100).toFixed(0)}% continuation relevance`
+                            : pieceEmphasisMode === 'control'
+                              ? `${(entry.controlScore * 100).toFixed(0)}% control contribution`
+                              : `${(entry.score * 100).toFixed(0)}% blended relevance`}
+                        </span>
+                      </div>
+                      <span className="score-pill">
+                        {(entry.score * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="detail-copy">
+                  No standout pieces were identified for this emphasis mode in the current
+                  position.
+                </p>
+              )}
+            </section>
+          ) : null}
 
           <section className="detail-card">
             <div className="section-heading">
