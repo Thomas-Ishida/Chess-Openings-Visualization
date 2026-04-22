@@ -1,0 +1,13 @@
+{
+    "name": "chess-opening-explorer",
+    "version": "1.0.0",
+    "scripts": {
+      "build": "tsc",
+      "watch": "tsc --watch",
+      "dev": "tsc && python3 -m http.server 8000"
+    },
+    "devDependencies": {
+      "typescript": "^5.4.0",
+      "@types/d3": "^7.4.0"
+    }
+  }

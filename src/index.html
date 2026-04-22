@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess Opening Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f4f1ec;
+    --surface: #ffffff;
+    --surface2: #f0ede8;
+    --border: #d8d0c4;
+    --text: #1a1a1a;
+    --text-muted: #6b6560;
+    --text-dim: #a89e94;
+    --accent: #8b5e2a;
+    --accent-dim: #c49a5a;
+    --light-sq: #f0d9b5;
+    --dark-sq: #b58863;
+    --last-move: rgba(200,169,110,0.55);
+    --check: rgba(220,60,60,0.65);
+    --selected: #8b5e2a;
+    --legal-dot: rgba(100,70,30,0.45);
+  }
+
+  /* ---- Layout ---- */
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 48px;
+  }
+  header {
+    width: 100%;
+    max-width: 980px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--accent); }
+  header span { font-size: 11px; color: var(--text-muted); letter-spacing: .08em; text-transform: uppercase; }
+  .main-layout {
+    width: 100%;
+    max-width: 980px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  .board-col { display: flex; flex-direction: column; gap: 12px; }
+  .right-col { display: flex; flex-direction: column; gap: 14px; padding-top: 2px; }
+
+  /* ---- Board ---- */
+  .board-wrap { display: flex; gap: 6px; align-items: flex-start; }
+  .rank-labels { display: flex; flex-direction: column; justify-content: space-around; height: 432px; }
+  .coord { font-size: 10px; color: var(--text-dim); width: 12px; text-align: center; line-height: 54px; }
+  .file-labels { display: flex; justify-content: space-around; width: 432px; margin-top: 4px; margin-left: 18px; }
+  #board {
+    display: grid;
+    grid-template-columns: repeat(8, 54px);
+    grid-template-rows: repeat(8, 54px);
+    border: 2px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.13);
+  }
+  .sq {
+    width: 54px; height: 54px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 34px;
+    cursor: default;
+    position: relative;
+    user-select: none;
+  }
+  .sq.light { background: var(--light-sq); }
+  .sq.dark  { background: var(--dark-sq); }
+  .sq.selected { box-shadow: inset 0 0 0 3px var(--selected); }
+  .sq.last-move { background: var(--last-move) !important; }
+  .sq.check-king { background: var(--check) !important; }
+  .sq.legal { cursor: pointer; }
+  .sq.legal::after {
+    content: '';
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--legal-dot);
+    position: absolute;
+    pointer-events: none;
+  }
+  .sq.legal.has-piece::after {
+    width: 50px; height: 50px;
+    border-radius: 0;
+    background: transparent;
+    border: 3px solid var(--legal-dot);
+  }
+  .sq .heat-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+
+  /* ---- Piece colors ---- */
+  .sq .piece-label {
+    position: relative;
+    z-index: 2;
+  }
+  .sq .piece-label.white-piece {
+    color: #3a7bd5;
+    text-shadow:
+      0 0 2px rgba(0,0,0,0.8),
+      1px 1px 3px rgba(0,0,0,0.6),
+      -1px -1px 3px rgba(0,0,0,0.6);
+  }
+  .sq .piece-label.black-piece {
+    color: #c0392b;
+    text-shadow:
+      0 0 2px rgba(0,0,0,0.6),
+      1px 1px 3px rgba(0,0,0,0.4),
+      -1px -1px 3px rgba(0,0,0,0.4);
+  }
+
+  /* ---- Controls ---- */
+  .status-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+    width: 452px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .status-bar strong { color: var(--accent); font-weight: 500; }
+  .controls-row { display: flex; align-items: center; gap: 8px; width: 452px; flex-wrap: wrap; }
+  .ctrl-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 5px;
+    padding: 6px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s, box-shadow .15s;
+    white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  }
+  .ctrl-btn:hover { background: var(--surface2); border-color: var(--accent-dim); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+  .ctrl-btn:disabled { opacity: .4; cursor: default; }
+  .speed-row { display: flex; align-items: center; gap: 8px; width: 452px; font-size: 11px; color: var(--text-muted); }
+  .speed-row input[type=range] { flex: 1; accent-color: var(--accent); }
+
+  /* ---- Move log ---- */
+  .move-log {
+    width: 452px; max-height: 60px; overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .move-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .move-chip.current { border-color: var(--accent-dim); color: var(--accent); }
+
+  /* ---- Heatmap ---- */
+  .heat-row { display: flex; gap: 8px; width: 452px; align-items: center; }
+  .heat-btn {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    text-align: center;
+    transition: all .15s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .heat-btn:hover { border-color: var(--accent-dim); }
+  .heat-btn.on-white { border-color: #4a8fff; color: #2a6fd4; background: rgba(74,143,255,.1); }
+  .heat-btn.on-black { border-color: #e05050; color: #c0392b; background: rgba(220,80,80,.1); }
+  .heat-btn.on-both  { border-color: #9b59b6; color: #7d3c98; background: rgba(155,89,182,.1); }
+  .legend { display: flex; gap: 12px; font-size: 10px; color: var(--text-muted); align-items: center; flex-wrap: wrap; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 4px; }
+
+  /* ---- Panels ---- */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  }
+  .panel-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-body { padding: 12px 14px; }
+  select#opening-select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 5px;
+    padding: 7px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    margin-bottom: 10px;
+    outline: none;
+  }
+  select#opening-select:focus { border-color: var(--accent-dim); }
+  .opening-desc { font-size: 11px; color: var(--text-muted); line-height: 1.7; }
+
+  /* ---- PGN upload ---- */
+  .pgn-zone {
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    position: relative;
+  }
+  .pgn-zone:hover, .pgn-zone.drag-over { border-color: var(--accent-dim); background: rgba(139,94,42,.04); }
+  .pgn-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+  .pgn-zone-text { font-size: 12px; color: var(--text-muted); pointer-events: none; }
+  .pgn-zone-text strong { color: var(--accent); font-weight: 500; display: block; margin-bottom: 4px; font-size: 13px; }
+  .pgn-progress { display: none; flex-direction: column; gap: 6px; }
+  .pgn-progress.visible { display: flex; }
+  .progress-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .1s; width: 0%; }
+  .progress-text { font-size: 11px; color: var(--text-muted); }
+  .data-badge { font-size: 10px; padding: 3px 8px; border-radius: 3px; font-weight: 500; }
+  .data-badge.builtin { background: rgba(100,100,100,.12); color: var(--text-muted); }
+  .data-badge.pgn { background: rgba(139,94,42,.12); color: var(--accent); }
+
+  /* ---- D3 tree ---- */
+  #tree-section { width: 100%; max-width: 980px; margin-top: 20px; }
+  #tree-svg-wrap {
+    width: 100%;
+    overflow-x: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  }
+  #tree-svg-wrap svg { display: block; }
+  .tree-node { cursor: pointer; }
+  .tree-link { fill: none; }
+
+  /* ---- Tooltip ---- */
+  #tree-tooltip {
+    position: fixed;
+    pointer-events: none;
+    z-index: 100;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    min-width: 200px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    opacity: 0;
+    transition: opacity .15s;
+  }
+  .tt-move { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+  .tt-name { font-size: 10px; color: var(--text-muted); margin-bottom: 8px; }
+  .tt-stats { font-size: 10px; color: var(--text-muted); margin-bottom: 6px; }
+  .tt-wr { display: flex; border-radius: 3px; overflow: hidden; height: 12px; margin-bottom: 6px; }
+  .tt-wr-w { background: #3a7bd5; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #fff; }
+  .tt-wr-d { background: #aaa; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #fff; }
+  .tt-wr-b { background: #c0392b; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #fff; }
+  .tt-hint { font-size: 9px; color: var(--text-dim); margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Opening Explorer</h1>
+  <span>Chess · heatmap · opening tree · PGN import</span>
+</header>
+
+<div class="main-layout">
+  <!-- LEFT: board -->
+  <div class="board-col">
+    <div class="board-wrap">
+      <div class="rank-labels" id="rank-labels"></div>
+      <div>
+        <div id="board"></div>
+        <div class="file-labels" id="file-labels"></div>
+      </div>
+    </div>
+
+    <div class="status-bar" id="status-bar">Select an opening and press play</div>
+
+    <div class="controls-row">
+      <button class="ctrl-btn" id="btn-prev">&#9664;</button>
+      <button class="ctrl-btn" id="btn-play">&#9654; Play</button>
+      <button class="ctrl-btn" id="btn-next">&#9654;&#9654;</button>
+      <button class="ctrl-btn" id="btn-reset">&#8635; Reset</button>
+      <button class="ctrl-btn" id="btn-free">Free play</button>
+      <button class="ctrl-btn" id="btn-flip">⟳ Black side</button>
+      <span id="move-progress" style="font-size:11px;color:var(--text-dim);margin-left:auto;"></span>
+    </div>
+
+    <div class="speed-row">
+      <span>Speed</span>
+      <input type="range" id="speed-slider" min="1" max="5" step="1" value="3">
+      <span id="speed-label" style="min-width:50px;">Medium</span>
+    </div>
+
+    <div class="heat-row">
+      <span style="font-size:11px;color:var(--text-muted);">Heatmap:</span>
+      <button class="heat-btn" id="heat-white" onclick="toggleHeat('white')">&#9632; White</button>
+      <button class="heat-btn" id="heat-black" onclick="toggleHeat('black')">&#9632; Black</button>
+      <button class="heat-btn" id="heat-both"  onclick="toggleHeat('both')">&#9632;&#9632; Both</button>
+      <button class="heat-btn" id="heat-off"   onclick="toggleHeat('off')" style="flex:0.4">Off</button>
+    </div>
+    <div class="legend" id="heat-legend" style="display:none;">
+      <span><span class="legend-dot" style="background:rgba(74,143,255,0.6)"></span>White control</span>
+      <span><span class="legend-dot" style="background:rgba(220,80,80,0.6)"></span>Black control</span>
+      <span><span class="legend-dot" style="background:rgba(155,89,182,0.6)"></span>Contested</span>
+      <span style="color:var(--text-dim)">Intensity = attackers</span>
+    </div>
+
+    <div class="move-log" id="move-log"></div>
+  </div>
+
+  <!-- RIGHT: dataset + opening selector -->
+  <div class="right-col">
+    <div class="panel">
+      <div class="panel-header">
+        <span>Dataset</span>
+        <span class="data-badge builtin" id="data-badge">Built-in data</span>
+      </div>
+      <div class="panel-body" style="display:flex;flex-direction:column;gap:10px;">
+        <div class="pgn-zone" id="pgn-zone">
+          <input type="file" id="pgn-file" accept=".pgn" multiple>
+          <div class="pgn-zone-text" id="pgn-zone-text">
+            <strong id="pgn-zone-title">&#8987; Loading lichess_elite_2025-11.pgn...</strong>
+            <span style="font-size:10px;color:var(--text-dim);">Drop one or more .pgn files — they will be merged together</span>
+          </div>
+        </div>
+        <div class="pgn-progress" id="pgn-progress">
+          <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill"></div></div>
+          <div class="progress-text" id="progress-text">Parsing...</div>
+        </div>
+        <div id="pgn-stats" style="font-size:11px;color:var(--text-muted);display:none;"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">Opening</div>
+      <div class="panel-body">
+        <select id="opening-select"></select>
+        <div class="opening-desc" id="opening-desc"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- D3 tree — full width below -->
+<div id="tree-section">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+    <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">Continuations tree</span>
+    <span style="font-size:10px;color:var(--text-dim);display:flex;gap:14px;align-items:center;">
+      <span><svg width="28" height="6"><line x1="0" y1="3" x2="28" y2="3" stroke="#2a4a9a" stroke-width="4"/></svg> White favoured</span>
+      <span><svg width="28" height="6"><line x1="0" y1="3" x2="28" y2="3" stroke="#9a2a2a" stroke-width="4"/></svg> Black favoured</span>
+      <span>Edge thickness = frequency</span>
+    </span>
+  </div>
+  <div id="tree-svg-wrap">
+    <div id="tree-placeholder" style="text-align:center;padding:32px;font-size:11px;color:var(--text-dim);">Play through an opening to explore continuations</div>
+  </div>
+</div>
+
+<div id="tree-tooltip">
+  <div class="tt-move" id="tt-move"></div>
+  <div class="tt-name" id="tt-name"></div>
+  <div class="tt-stats" id="tt-stats"></div>
+  <div class="tt-wr"   id="tt-wr"></div>
+  <div class="tt-hint">Click to play this move</div>
+</div>
+
+<!-- D3 loaded globally (non-module) then compiled TS as ES module -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script type="module" src="dist/app.js"></script>
+</body>
+</html>

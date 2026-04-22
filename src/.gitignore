@@ -1,0 +1,9 @@
+dist/
+*.js
+*.js.map
+node_modules/
+.venv/
+venv/
+ENV/
+*.pgn
+.cache/
