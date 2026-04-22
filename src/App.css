@@ -100,6 +100,12 @@
   gap: 0.75rem;
 }
 
+.suggestion-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
 .chip,
 .mode-button {
   border: 1px solid rgba(148, 163, 184, 0.35);
@@ -287,6 +293,14 @@
   margin-top: 1.1rem;
 }
 
+.detail-group-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.6rem;
+}
+
 .detail-group h3,
 .attacker-columns h3 {
   margin: 0 0 0.6rem;
@@ -364,6 +378,16 @@
   color: #9a3412;
 }
 
+.engine-mode-note.partial {
+  background: rgba(239, 246, 255, 0.7);
+  border-color: rgba(37, 99, 235, 0.18);
+}
+
+.engine-mode-note.partial strong,
+.engine-mode-note.partial .source-label {
+  color: #1d4ed8;
+}
+
 .source-label {
   display: inline-flex;
   align-items: center;
@@ -375,6 +399,11 @@
   color: #9a3412;
   font-size: 0.78rem;
   font-weight: 700;
+}
+
+.source-label.blue {
+  border-color: rgba(37, 99, 235, 0.16);
+  color: #1d4ed8;
 }
 
 .continuation-card,
@@ -493,6 +522,45 @@
   display: block;
   margin-bottom: 0.3rem;
   color: #0f172a;
+}
+
+.key-piece-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.key-piece-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.85rem;
+  align-items: center;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.95rem;
+  background: #f8fafc;
+}
+
+.key-piece-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.key-piece-copy strong {
+  color: #0f172a;
+}
+
+.score-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .move-buttons {

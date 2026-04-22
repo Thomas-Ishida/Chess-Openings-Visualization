@@ -36,11 +36,14 @@ export interface BookLookupResult {
 }
 
 export interface EngineSuggestion {
+  sourceFen: string
   uci: string
   line: string[]
   cp?: number
   mate?: number
   resultingFen: string
+  parseStatus: 'full' | 'partial' | 'invalid'
+  firstMoveSan?: string
 }
 
 export interface EngineLookupResult {
@@ -152,14 +155,17 @@ export async function fetchEngineSuggestions(
       .filter(Boolean)
       .map((uciMove) => normalizeCloudEvalMove(fen, uciMove))
       .filter((uciMove): uciMove is string => Boolean(uciMove))
-    const resultingFen = applyUciMoves(fen, line)
+    const parsed = parseEngineLine(fen, line)
 
     return {
-      uci: line[0] ?? '',
-      line,
+      sourceFen: fen,
+      uci: parsed.line[0] ?? '',
+      line: parsed.line,
       cp: variation.cp,
       mate: variation.mate,
-      resultingFen,
+      resultingFen: parsed.resultingFen,
+      parseStatus: parsed.parseStatus,
+      firstMoveSan: parsed.firstMoveSan,
     }
   })
 
@@ -315,6 +321,59 @@ function applyUciMoves(startingFen: string, uciMoves: string[]): string {
   }
 
   return chess.fen()
+}
+
+function parseEngineLine(
+  startingFen: string,
+  uciMoves: string[],
+): {
+  line: string[]
+  resultingFen: string
+  parseStatus: 'full' | 'partial' | 'invalid'
+  firstMoveSan?: string
+} {
+  const chess = new Chess(startingFen)
+  const parsedLine: string[] = []
+  let firstMoveSan: string | undefined
+
+  for (const [index, uciMove] of uciMoves.entries()) {
+    const from = uciMove.slice(0, 2) as Square
+    const to = uciMove.slice(2, 4) as Square
+    const promotion = uciMove.length > 4 ? uciMove[4] : undefined
+
+    try {
+      const result = chess.move({ from, to, promotion })
+
+      if (!result) {
+        return {
+          line: parsedLine,
+          resultingFen: chess.fen(),
+          parseStatus: index === 0 ? 'invalid' : 'partial',
+          firstMoveSan,
+        }
+      }
+
+      parsedLine.push(uciMove)
+
+      if (index === 0) {
+        firstMoveSan = result.san
+      }
+    } catch {
+      return {
+        line: parsedLine,
+        resultingFen: chess.fen(),
+        parseStatus: index === 0 ? 'invalid' : 'partial',
+        firstMoveSan,
+      }
+    }
+  }
+
+  return {
+    line: parsedLine,
+    resultingFen: chess.fen(),
+    parseStatus: 'full',
+    firstMoveSan,
+  }
 }
 
 function buildBundledContinuation(
