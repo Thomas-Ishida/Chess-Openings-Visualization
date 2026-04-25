@@ -4,7 +4,9 @@ import type { Square } from 'chess.js'
 
 import './App.css'
 import openingsData from './data/openings.json'
+import defaultPgnUrl from './data/lichess_elite_2025-11-top50-capped-1000.pgn?url'
 import { ChessHeatmapBoard } from './components/ChessHeatmapBoard'
+import { OpeningTree } from './components/OpeningTree'
 import {
   applyUciMove,
   buildPositionSnapshotFromChess,
@@ -25,8 +27,17 @@ import {
   type ContinuationMove,
   type EngineSuggestion,
 } from './lib/explorer-api'
+import {
+  buildOpeningTreeBranches,
+  loadParsedFileCache,
+  mergeOpeningBundles,
+  parsePgnTextToBundles,
+  saveParsedFileCache,
+} from './lib/pgn-parser'
+import type { OpeningTrieBundle, PgnProgressSnapshot } from './lib/opening-tree-types'
 
 const openings = openingsData as OpeningDefinition[]
+const DEFAULT_PGN_FILE_NAME = 'lichess_elite_2025-11-top50-capped-1000.pgn'
 
 const MODE_COPY: Record<
   HeatmapMode,
@@ -88,6 +99,14 @@ function App() {
   const [selectedEngineIndex, setSelectedEngineIndex] = useState(0)
   const [suggestionSourceMode, setSuggestionSourceMode] =
     useState<SuggestionSourceMode>('auto')
+  const [openingTreeEnabled, setOpeningTreeEnabled] = useState(true)
+  const [openingTries, setOpeningTries] = useState<OpeningTrieBundle[] | null>(null)
+  const [pgnProgress, setPgnProgress] = useState<PgnProgressSnapshot[]>([])
+  const [loadedPgnFiles, setLoadedPgnFiles] = useState<string[]>([])
+  const [pgnTotalGames, setPgnTotalGames] = useState(0)
+  const [pgnError, setPgnError] = useState<string | null>(null)
+  const [isDefaultPgnLoading, setIsDefaultPgnLoading] = useState(true)
+  const [isAutoPlaying, setIsAutoPlaying] = useState(false)
 
   const selectedOpening = useMemo(
     () =>
@@ -113,6 +132,91 @@ function App() {
 
     return sanMoves
   }, [selectedOpening, userMoves])
+
+  useEffect(() => {
+    let cancelled = false
+    let timeoutId: number | null = null
+
+    async function loadDefaultPgnDataset() {
+      setPgnError(null)
+      setIsDefaultPgnLoading(true)
+
+      try {
+        const fromCache = loadParsedFileCache(DEFAULT_PGN_FILE_NAME)
+        if (fromCache) {
+          if (cancelled) {
+            return
+          }
+
+          setOpeningTreeEnabled(true)
+          setOpeningTries(fromCache.bundles)
+          setLoadedPgnFiles([DEFAULT_PGN_FILE_NAME])
+          setPgnTotalGames(fromCache.totalGames)
+          return
+        }
+
+        const response = await fetch(defaultPgnUrl)
+        if (!response.ok) {
+          throw new Error(`Could not fetch ${DEFAULT_PGN_FILE_NAME}.`)
+        }
+        const defaultPgnText = await response.text()
+
+        const parsed = await parsePgnTextToBundles(
+          DEFAULT_PGN_FILE_NAME,
+          defaultPgnText,
+          openings,
+          (progress) => {
+            if (cancelled) {
+              return
+            }
+            setPgnProgress((current) => {
+              const next = current.filter((entry) => entry.fileName !== progress.fileName)
+              next.push(progress)
+              return next
+            })
+          },
+        )
+        saveParsedFileCache(DEFAULT_PGN_FILE_NAME, parsed.bundles, parsed.totalGames)
+
+        if (cancelled) {
+          return
+        }
+
+        setOpeningTreeEnabled(true)
+        setOpeningTries(parsed.bundles)
+        setLoadedPgnFiles([DEFAULT_PGN_FILE_NAME])
+        setPgnTotalGames(parsed.totalGames)
+      } catch (error) {
+        if (cancelled) {
+          return
+        }
+        setPgnError(
+          error instanceof Error
+            ? error.message
+            : `Could not process ${DEFAULT_PGN_FILE_NAME}.`,
+        )
+      } finally {
+        if (!cancelled) {
+          setPgnProgress((current) =>
+            current.filter((entry) => entry.fileName !== DEFAULT_PGN_FILE_NAME),
+          )
+          setIsDefaultPgnLoading(false)
+        }
+      }
+    }
+
+    // Defer heavy PGN parsing until after the first paint.
+    timeoutId = window.setTimeout(() => {
+      void loadDefaultPgnDataset()
+    }, 0)
+
+    return () => {
+      cancelled = true
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -328,6 +432,16 @@ function App() {
   }, [continuationScores, controlScores, pieceEmphasisMode, snapshot.pieces])
 
   const inBook = Boolean(bookData && bookData.moves.length > 0)
+  /** Full tree from the end of the book opening — stable while you navigate (does not re-root on each click). */
+  const pgnTreeBranchesAtTabiya = useMemo(
+    () => buildOpeningTreeBranches(selectedOpening, openingTries, []),
+    [openingTries, selectedOpening],
+  )
+  /** One step ahead from the current position (board line) — for “next move” and autoplay. */
+  const pgnBranchesAtPosition = useMemo(
+    () => buildOpeningTreeBranches(selectedOpening, openingTries, userMoves),
+    [openingTries, selectedOpening, userMoves],
+  )
   const canUndo = userMoves.length > 0
   const resolvedSuggestionSource = useMemo(() => {
     if (suggestionSourceMode === 'statistics') {
@@ -520,6 +634,92 @@ function App() {
     setHoveredSquare(null)
   }
 
+  async function handleLoadPgnFiles(fileList: FileList | null) {
+    if (!fileList || fileList.length === 0) {
+      return
+    }
+
+    setPgnError(null)
+    const files = Array.from(fileList)
+    let mergedBundles: OpeningTrieBundle[] | null = null
+    const nextLoadedFiles: string[] = []
+    let nextTotalGames = 0
+
+    for (const file of files) {
+      try {
+        const fromCache = loadParsedFileCache(file.name)
+        if (fromCache) {
+          mergedBundles = mergedBundles
+            ? mergeOpeningBundles(mergedBundles, fromCache.bundles)
+            : fromCache.bundles
+          nextLoadedFiles.push(file.name)
+          nextTotalGames += fromCache.totalGames
+          continue
+        }
+
+        const text = await file.text()
+        const parsed = await parsePgnTextToBundles(file.name, text, openings, (progress) => {
+          setPgnProgress((current) => {
+            const next = current.filter((entry) => entry.fileName !== progress.fileName)
+            next.push(progress)
+            return next
+          })
+        })
+        saveParsedFileCache(file.name, parsed.bundles, parsed.totalGames)
+        mergedBundles = mergedBundles
+          ? mergeOpeningBundles(mergedBundles, parsed.bundles)
+          : parsed.bundles
+        nextLoadedFiles.push(file.name)
+        nextTotalGames += parsed.totalGames
+      } catch (error) {
+        setPgnError(
+          error instanceof Error ? error.message : `Could not process ${file.name}.`,
+        )
+      } finally {
+        setPgnProgress((current) =>
+          current.filter((entry) => entry.fileName !== file.name),
+        )
+      }
+    }
+
+    if (mergedBundles) {
+      setOpeningTreeEnabled(true)
+      setOpeningTries(mergedBundles)
+      setLoadedPgnFiles(nextLoadedFiles)
+      setPgnTotalGames(nextTotalGames)
+    }
+  }
+
+  function handleApplyTreePath(path: string[]) {
+    if (!path.length) {
+      return
+    }
+
+    // `path` is the full PGN line after the book opening; replace (do not append) so the tree stays the same shape.
+    setUserMoves([...path])
+    setHoveredSquare(null)
+    setSelectedSquare(null)
+  }
+
+  useEffect(() => {
+    if (!isAutoPlaying) {
+      return
+    }
+
+    const timer = window.setInterval(() => {
+      const topBranch = pgnBranchesAtPosition[0]
+      if (!topBranch) {
+        setIsAutoPlaying(false)
+        return
+      }
+      setUserMoves((moves) => [...moves, topBranch.uci])
+    }, 900)
+
+    return () => {
+      window.clearInterval(timer)
+    }
+  }, [isAutoPlaying, pgnBranchesAtPosition])
+
   function handleUndo() {
     if (!canUndo) {
       return
@@ -632,6 +832,44 @@ function App() {
             emphasizes pieces driving the current heatmap.
           </p>
         </div>
+
+        <div className="toolbar-group">
+          <span className="toolbar-label">PGN dataset</span>
+          <input
+            type="file"
+            accept=".pgn"
+            multiple
+            onChange={(event) => void handleLoadPgnFiles(event.target.files)}
+          />
+          <div className="mode-toggle">
+            <button
+              type="button"
+              className={`mode-button ${openingTreeEnabled ? 'active' : ''}`}
+              onClick={() => setOpeningTreeEnabled((enabled) => !enabled)}
+            >
+              {openingTreeEnabled ? 'Tree on' : 'Tree off'}
+            </button>
+          </div>
+          <p className="toolbar-description">
+            {loadedPgnFiles.length > 0
+              ? `${loadedPgnFiles.length} file(s), ${pgnTotalGames.toLocaleString()} total games`
+              : 'Load one or more PGN files to build local continuation trees.'}
+          </p>
+          {isDefaultPgnLoading ? (
+            <p className="toolbar-loading-note">Loading default dataset...</p>
+          ) : null}
+          {pgnProgress.length > 0 ? (
+            <p className="toolbar-description">
+              {pgnProgress
+                .map(
+                  (entry) =>
+                    `${entry.fileName}: ${entry.done.toLocaleString()}/${entry.total.toLocaleString()} (${Math.round((entry.done / Math.max(entry.total, 1)) * 100)}%)`,
+                )
+                .join(' | ')}
+            </p>
+          ) : null}
+          {pgnError ? <p className="error-text">{pgnError}</p> : null}
+        </div>
       </section>
 
       <main className="content-grid">
@@ -672,6 +910,27 @@ function App() {
               >
                 Undo move
               </button>
+              <button
+                type="button"
+                className="action-button"
+                onClick={() => setIsAutoPlaying((playing) => !playing)}
+                disabled={pgnBranchesAtPosition.length === 0}
+              >
+                {isAutoPlaying ? 'Pause autoplay' : 'Autoplay top line'}
+              </button>
+              <button
+                type="button"
+                className="action-button"
+                onClick={() => {
+                  const next = pgnBranchesAtPosition[0]
+                  if (next) {
+                    setUserMoves((moves) => [...moves, next.uci])
+                  }
+                }}
+                disabled={pgnBranchesAtPosition.length === 0}
+              >
+                Next move
+              </button>
             </div>
 
             <div className="legend">
@@ -709,6 +968,30 @@ function App() {
               <p>Squares with the heaviest combined pressure from both sides.</p>
             </article>
           </div>
+
+          {openingTreeEnabled ? (
+            <section className="detail-card pgn-tree-card">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">PGN continuation tree</p>
+                  <h2>Interactive tree</h2>
+                </div>
+                <span className="detail-badge subtle">
+                  {pgnTreeBranchesAtTabiya.length > 0
+                    ? `${pgnTreeBranchesAtTabiya.length} root branches`
+                    : 'No tree data'}
+                </span>
+              </div>
+              <OpeningTree
+                key={selectedOpeningId}
+                rootLabel={selectedOpening.name}
+                openingMoveCount={selectedOpening.moves.length}
+                activePath={userMoves}
+                branches={pgnTreeBranchesAtTabiya}
+                onSelectPath={handleApplyTreePath}
+              />
+            </section>
+          ) : null}
         </section>
 
         <aside className="detail-column">

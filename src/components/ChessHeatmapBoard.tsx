@@ -187,7 +187,7 @@ export function ChessHeatmapBoard({
       .attr('width', squareSize)
       .attr('height', squareSize)
       .attr('fill', (datum: BoardSquareDatum) =>
-        (datum.coordinates.x + datum.coordinates.y) % 2 === 0 ? '#f5efe4' : '#b9b39b',
+        (datum.coordinates.x + datum.coordinates.y) % 2 === 0 ? '#f8f5ee' : '#b2a785',
       )
 
     root
@@ -356,15 +356,26 @@ export function ChessHeatmapBoard({
       .attr('x', (piece: PieceDatum) => piece.displayX)
       .attr('y', (piece: PieceDatum) => piece.displayY)
       .attr('text-anchor', 'middle')
-      .attr('font-size', squareSize * 0.76)
-      .attr('font-family', 'Georgia, serif')
-      .attr('fill', (piece: PieceDatum) => (piece.color === 'w' ? '#fff7ed' : '#111827'))
-      .attr('stroke', (piece: PieceDatum) => (piece.color === 'w' ? '#1f2937' : '#f9fafb'))
-      .attr('stroke-width', (piece: PieceDatum) =>
-        piece.square === selectedSquare ? 1.2 : 0.6,
+      .attr(
+        'font-size',
+        (piece: PieceDatum) =>
+          squareSize * 0.76 * (0.82 + Math.min(Math.max(piece.emphasis, 0), 1) * 0.18),
       )
-      .attr('fill-opacity', (piece: PieceDatum) => piece.emphasis)
-      .attr('stroke-opacity', (piece: PieceDatum) => Math.min(piece.emphasis + 0.15, 1))
+      .attr('font-family', 'Georgia, serif')
+      .attr('fill', (piece: PieceDatum) => (piece.color === 'w' ? '#fefce8' : '#020617'))
+      .attr('stroke', (piece: PieceDatum) => (piece.color === 'w' ? '#0f172a' : '#e2e8f0'))
+      .attr('stroke-width', (piece: PieceDatum) =>
+        piece.square === selectedSquare
+          ? piece.color === 'w'
+            ? 1.75
+            : 1.2
+          : piece.color === 'w'
+            ? 1.25
+            : 0.95,
+      )
+      .attr('fill-opacity', 1)
+      .attr('stroke-opacity', 1)
+      .attr('style', 'text-shadow: 0 1px 1px rgba(2, 6, 23, 0.45);')
       .attr('paint-order', 'stroke')
       .text((piece: PieceDatum) => PIECE_GLYPHS[piece.color][piece.type])
 

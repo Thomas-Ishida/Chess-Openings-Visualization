@@ -48,6 +48,13 @@
   color: #475569;
 }
 
+.toolbar-loading-note {
+  margin: -0.25rem 0 0;
+  font-size: 0.78rem;
+  color: #64748b;
+  letter-spacing: 0.01em;
+}
+
 .hero-highlights {
   display: grid;
   gap: 1rem;
@@ -122,6 +129,66 @@
     background 120ms ease,
     color 120ms ease,
     box-shadow 120ms ease;
+}
+
+input[type='file'] {
+  font-size: 0.9rem;
+  color: #334155;
+}
+
+.opening-tree-canvas {
+  width: 100%;
+  min-height: 360px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 1rem;
+  background: #f8fafc;
+}
+
+.pgn-tree-card {
+  width: 100%;
+  min-width: 0;
+}
+
+.opening-tree-wrap {
+  position: relative;
+  width: 100%;
+  overflow: auto;
+}
+
+.opening-tree-tooltip {
+  position: fixed;
+  z-index: 100;
+  pointer-events: none;
+  min-width: 160px;
+  max-width: 240px;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.5rem;
+  border: 1px solid #d8d0c4;
+  background: #fffef9;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: #1a1a1a;
+}
+
+.opening-tree-tooltip-move {
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 0.2rem;
+}
+
+.opening-tree-tooltip-name {
+  color: #8b8078;
+  margin-bottom: 0.15rem;
+}
+
+.opening-tree-tooltip-stats {
+  color: #a89e94;
+  margin-bottom: 0.35rem;
+}
+
+.version2-tree .version2-tree-node-rect {
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1));
 }
 
 .chip:hover,
