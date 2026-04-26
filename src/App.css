@@ -665,6 +665,28 @@ input[type='file'] {
   cursor: not-allowed;
 }
 
+.dropdown-toggle-header {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  margin-bottom: 1rem;
+}
+
+.dropdown-toggle-header:hover .dropdown-chevron {
+  color: #2563eb;
+}
+
+.dropdown-chevron {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  transition: color 120ms ease;
+  flex-shrink: 0;
+}
+
 .small-note {
   color: #64748b;
   font-size: 0.88rem;

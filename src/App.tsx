@@ -107,6 +107,7 @@ function App() {
   const [pgnError, setPgnError] = useState<string | null>(null)
   const [isDefaultPgnLoading, setIsDefaultPgnLoading] = useState(true)
   const [isAutoPlaying, setIsAutoPlaying] = useState(false)
+  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false)
 
   const selectedOpening = useMemo(
     () =>
@@ -1031,26 +1032,38 @@ function App() {
           </section>
 
           <section className="detail-card">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Continuation explorer</p>
-                <h2>Suggestions</h2>
+            <button
+              type="button"
+              className="dropdown-toggle-header"
+              onClick={() => setIsSuggestionsOpen((open) => !open)}
+              aria-expanded={isSuggestionsOpen}
+            >
+              <div className="section-heading" style={{ marginBottom: 0 }}>
+                <div>
+                  <p className="eyebrow">Continuation explorer</p>
+                  <h2>Suggestions</h2>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span
+                    className={`detail-badge ${inBook ? 'in-book' : 'out-of-book'}`}
+                  >
+                    {bookStatus === 'loading'
+                      ? 'Loading book data'
+                      : resolvedSuggestionSource === 'statistics'
+                        ? bookData?.source === 'live-book'
+                          ? 'Live book'
+                          : 'Bundled book'
+                        : resolvedSuggestionSource === 'engine'
+                          ? 'Engine'
+                          : 'No data'}
+                  </span>
+                  <span className="dropdown-chevron">{isSuggestionsOpen ? '▲' : '▼'}</span>
+                </div>
               </div>
-              <span
-                className={`detail-badge ${inBook ? 'in-book' : 'out-of-book'}`}
-              >
-                {bookStatus === 'loading'
-                  ? 'Loading book data'
-                  : resolvedSuggestionSource === 'statistics'
-                    ? bookData?.source === 'live-book'
-                      ? 'Live book'
-                      : 'Bundled book'
-                    : resolvedSuggestionSource === 'engine'
-                      ? 'Engine'
-                      : 'No data'}
-              </span>
-            </div>
-            <div className="suggestion-toggle" role="tablist" aria-label="Suggestion source">
+            </button>
+
+            {isSuggestionsOpen && (
+            <><div className="suggestion-toggle" role="tablist" aria-label="Suggestion source">
               {(Object.keys(SUGGESTION_SOURCE_COPY) as SuggestionSourceMode[]).map((sourceMode) => (
                 <button
                   key={sourceMode}
@@ -1226,6 +1239,8 @@ function App() {
                   ? engineError ?? 'No cloud evaluation was available for this position.'
                   : 'No suggestions are available for this position yet.'}
               </p>
+            )}
+            </>
             )}
           </section>
 
