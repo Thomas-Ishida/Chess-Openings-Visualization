@@ -108,6 +108,7 @@ function App() {
   const [isDefaultPgnLoading, setIsDefaultPgnLoading] = useState(true)
   const [isAutoPlaying, setIsAutoPlaying] = useState(false)
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false)
+  const [isWelcomeOpen, setIsWelcomeOpen] = useState(true)
 
   const selectedOpening = useMemo(
     () =>
@@ -732,41 +733,62 @@ function App() {
 
   return (
     <div className="app-shell">
-      <header className="hero-panel">
-        <div className="hero-copy">
-          <p className="eyebrow">Phase 2 opening explorer</p>
-          <h1>Play legal moves and compare heatmaps to real-game continuations.</h1>
-          <p className="hero-description">
-            Start from a curated opening, move pieces legally on the board, and
-            watch the heatmap, likely continuations, and out-of-book engine
-            suggestions update around the live position.
-          </p>
-        </div>
+      {isWelcomeOpen && (
+        <div className="welcome-overlay" onClick={() => setIsWelcomeOpen(false)}>
+          <div className="welcome-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="welcome-close"
+              onClick={() => setIsWelcomeOpen(false)}
+              aria-label="Close welcome"
+            >
+              ✕
+            </button>
 
-        <div className="hero-highlights">
-          <div className="highlight-card">
-            <span className="highlight-label">Opening</span>
-            <strong>{selectedOpening.name}</strong>
-            <span>{selectedOpening.eco}</span>
-          </div>
-          <div className="highlight-card">
-            <span className="highlight-label">View</span>
-            <strong>{MODE_COPY[mode].label}</strong>
-            <span>{MODE_COPY[mode].summary}</span>
-          </div>
-          <div className="highlight-card">
-            <span className="highlight-label">Position status</span>
-            <strong>{inBook ? 'In book' : 'Out of book'}</strong>
-            <span>
-              {inBook
-                ? bookData?.source === 'live-book'
-                  ? 'Continuation probabilities come from the live real-game explorer.'
-                  : 'Continuation probabilities come from the bundled opening-book fallback.'
-                : 'Showing engine suggestions because the position is outside the book.'}
-            </span>
+            <div className="hero-copy">
+              <p className="eyebrow">Phase 2 opening explorer</p>
+              <h1>Play legal moves and compare heatmaps to real-game continuations.</h1>
+              <p className="hero-description">
+                Start from a curated opening, move pieces legally on the board, and
+                watch the heatmap, likely continuations, and out-of-book engine
+                suggestions update around the live position.
+              </p>
+            </div>
+
+            <div className="hero-highlights">
+              <div className="highlight-card">
+                <span className="highlight-label">Opening</span>
+                <strong>{selectedOpening.name}</strong>
+                <span>{selectedOpening.eco}</span>
+              </div>
+              <div className="highlight-card">
+                <span className="highlight-label">View</span>
+                <strong>{MODE_COPY[mode].label}</strong>
+                <span>{MODE_COPY[mode].summary}</span>
+              </div>
+              <div className="highlight-card">
+                <span className="highlight-label">Position status</span>
+                <strong>{inBook ? 'In book' : 'Out of book'}</strong>
+                <span>
+                  {inBook
+                    ? bookData?.source === 'live-book'
+                      ? 'Continuation probabilities come from the live real-game explorer.'
+                      : 'Continuation probabilities come from the bundled opening-book fallback.'
+                    : 'Showing engine suggestions because the position is outside the book.'}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="welcome-start"
+              onClick={() => setIsWelcomeOpen(false)}
+            >
+              Start exploring →
+            </button>
           </div>
         </div>
-      </header>
+      )}
 
       <section className="toolbar">
         <div className="toolbar-group">
