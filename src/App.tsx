@@ -111,6 +111,7 @@ function App() {
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false)
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(true)
   const [isDecisionTreeOpen, setIsDecisionTreeOpen] = useState(false)
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
 
   const selectedOpening = useMemo(
     () =>
@@ -753,17 +754,65 @@ function App() {
         </div>
       )}
 
-      <section className="toolbar">
-        <div className="toolbar-group">
-          <span className="toolbar-label">Choose an opening</span>
-          <div className="chip-list" role="tablist" aria-label="Available openings">
-            {openings.map((opening) => (
-              <button
-                key={opening.id}
-                type="button"
-                className={`chip ${opening.id === selectedOpeningId ? 'active' : ''}`}
-                onClick={() => {
-                  setSelectedOpeningId(opening.id)
+      {/* ── Opening profile bar (overlaying drawer) ───────────────────── */}
+      <div className="profile-bar-wrapper">
+        <button
+          type="button"
+          className="profile-bar-toggle"
+          onClick={() => setIsProfileOpen((o) => !o)}
+          aria-expanded={isProfileOpen}
+        >
+          <p className="eyebrow" style={{ margin: 0 }}>Opening profile</p>
+          <strong className="profile-bar-name">{selectedOpening.name}</strong>
+          <span className="detail-badge">{selectedOpening.eco}</span>
+          <span className="dropdown-chevron" style={{ marginLeft: 'auto', fontSize: '0.9rem' }}>
+            {isProfileOpen ? '▲' : '▼'}
+          </span>
+        </button>
+
+        {isProfileOpen && (
+          <div className="profile-drawer">
+            <p className="detail-copy">{selectedOpening.description}</p>
+            <div className="drawer-grid">
+              <div className="drawer-section">
+                <h3>Key ideas</h3>
+                <ul>
+                  {selectedOpening.ideas.map((idea) => (
+                    <li key={idea}>{idea}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="drawer-section">
+                <h3>Typical mistakes</h3>
+                <ul>
+                  {selectedOpening.commonMistakes.map((mistake) => (
+                    <li key={mistake}>{mistake}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="drawer-section">
+                <h3>Current line</h3>
+                <p className="move-line">{formatMoveLine(currentLine)}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── 3-column main layout ───────────────────────────────────────── */}
+      <main className="content-grid">
+
+        {/* Left sidebar */}
+        <aside className="left-sidebar">
+          <div className="sidebar-card">
+
+            <div className="sidebar-group">
+              <span className="toolbar-label">Opening</span>
+              <select
+                className="opening-select"
+                value={selectedOpeningId}
+                onChange={(e) => {
+                  setSelectedOpeningId(e.target.value)
                   setUserMoves([])
                   setHoveredSquare(null)
                   setSelectedSquare(null)
@@ -776,135 +825,123 @@ function App() {
                   setSelectedEngineIndex(0)
                 }}
               >
-                {opening.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="toolbar-group">
-          <span className="toolbar-label">Heatmap mode</span>
-          <div className="mode-toggle" role="tablist" aria-label="Heatmap modes">
-            {(Object.keys(MODE_COPY) as HeatmapMode[]).map((viewMode) => (
-              <button
-                key={viewMode}
-                type="button"
-                className={`mode-button ${viewMode === mode ? 'active' : ''}`}
-                onClick={() => setMode(viewMode)}
-              >
-                {MODE_COPY[viewMode].label}
-              </button>
-            ))}
-          </div>
-          <p className="toolbar-description">{MODE_COPY[mode].description}</p>
-        </div>
-
-        <div className="toolbar-group">
-          <span className="toolbar-label">Piece emphasis</span>
-          <div className="mode-toggle" role="tablist" aria-label="Piece emphasis modes">
-            {(Object.keys(EMPHASIS_COPY) as PieceEmphasisMode[]).map((emphasisMode) => (
-              <button
-                key={emphasisMode}
-                type="button"
-                className={`mode-button ${emphasisMode === pieceEmphasisMode ? 'active' : ''}`}
-                onClick={() => setPieceEmphasisMode(emphasisMode)}
-              >
-                {EMPHASIS_COPY[emphasisMode]}
-              </button>
-            ))}
-          </div>
-          <p className="toolbar-description">
-            Continuation mode emphasizes pieces in likely next moves, while control mode
-            emphasizes pieces driving the current heatmap.
-          </p>
-        </div>
-
-        <div className="toolbar-group">
-          <span className="toolbar-label">PGN dataset</span>
-          <input
-            type="file"
-            accept=".pgn"
-            multiple
-            onChange={(event) => void handleLoadPgnFiles(event.target.files)}
-          />
-          <div className="mode-toggle">
-            <button
-              type="button"
-              className={`mode-button ${openingTreeEnabled ? 'active' : ''}`}
-              onClick={() => setOpeningTreeEnabled((enabled) => !enabled)}
-            >
-              {openingTreeEnabled ? 'Tree on' : 'Tree off'}
-            </button>
-          </div>
-          
-          <div className="toolbar-description">
-            {loadedPgnFiles.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                <span>{loadedPgnFiles.length} file(s), {pgnTotalGames.toLocaleString()} total games:</span>
-                <ul style={{ margin: 0, paddingLeft: '0', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  {loadedPgnFiles.map((fileName) => (
-                    <li key={fileName} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleRemovePgnFile(fileName)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#ef4444',
-                          cursor: 'pointer',
-                          padding: '0 4px',
-                          fontSize: '1.1rem',
-                          lineHeight: 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                        aria-label={`Remove ${fileName}`}
-                        title={`Remove ${fileName}`}
-                      >
-                        ✕
-                      </button>
-                      <span style={{ fontSize: '0.85rem', wordBreak: 'break-all' }}>{fileName}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              'Load one or more PGN files to build local continuation trees.'
-            )}
-          </div>
-
-          {isDefaultPgnLoading ? (
-            <p className="toolbar-loading-note">Loading default dataset...</p>
-          ) : null}
-          {pgnProgress.length > 0 ? (
-            <p className="toolbar-description">
-              {pgnProgress
-                .map(
-                  (entry) =>
-                    `${entry.fileName}: ${entry.done.toLocaleString()}/${entry.total.toLocaleString()} (${Math.round((entry.done / Math.max(entry.total, 1)) * 100)}%)`,
-                )
-                .join(' | ')}
-            </p>
-          ) : null}
-          {pgnError ? <p className="error-text">{pgnError}</p> : null}
-        </div>
-      </section>
-
-      <main className="content-grid">
-        <section className="board-column">
-          <div className="board-card">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Interactive board</p>
-                <h2>{selectedOpening.name}</h2>
-              </div>
-              <div className="fen-block">
-                <span>FEN</span>
-                <code>{snapshot.fen}</code>
-              </div>
+                {openings.map((opening) => (
+                  <option key={opening.id} value={opening.id}>
+                    {opening.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
+            <div className="sidebar-group">
+              <span className="toolbar-label">Heatmap mode</span>
+              <div className="mode-toggle" role="tablist" aria-label="Heatmap modes">
+                <button
+                  type="button"
+                  className={`mode-button piece-btn ${mode === 'white' ? 'active' : ''}`}
+                  onClick={() => setMode('white')}
+                  title="White pressure"
+                >
+                  ♙
+                </button>
+                <button
+                  type="button"
+                  className={`mode-button piece-btn ${mode === 'black' ? 'active' : ''}`}
+                  onClick={() => setMode('black')}
+                  title="Black pressure"
+                >
+                  ♟
+                </button>
+                <button
+                  type="button"
+                  className={`mode-button piece-btn ${mode === 'difference' ? 'active' : ''}`}
+                  onClick={() => setMode('difference')}
+                  title="Whole board"
+                >
+                  ♙♟
+                </button>
+              </div>
+              <p className="toolbar-description">{MODE_COPY[mode].description}</p>
+            </div>
+
+            <div className="sidebar-group">
+              <span className="toolbar-label">Piece emphasis</span>
+              <div className="mode-toggle" role="tablist" aria-label="Piece emphasis modes">
+                {(Object.keys(EMPHASIS_COPY) as PieceEmphasisMode[]).map((emphasisMode) => (
+                  <button
+                    key={emphasisMode}
+                    type="button"
+                    className={`mode-button ${emphasisMode === pieceEmphasisMode ? 'active' : ''}`}
+                    onClick={() => setPieceEmphasisMode(emphasisMode)}
+                  >
+                    {EMPHASIS_COPY[emphasisMode]}
+                  </button>
+                ))}
+              </div>
+              <p className="toolbar-description">
+                Continuation mode emphasizes pieces in likely next moves, while control mode
+                emphasizes pieces driving the current heatmap.
+              </p>
+            </div>
+
+            <div className="sidebar-group">
+              <span className="toolbar-label">PGN dataset</span>
+              <input
+                type="file"
+                accept=".pgn"
+                multiple
+                onChange={(event) => void handleLoadPgnFiles(event.target.files)}
+              />
+              <div className="mode-toggle">
+                <button
+                  type="button"
+                  className={`mode-button ${openingTreeEnabled ? 'active' : ''}`}
+                  onClick={() => setOpeningTreeEnabled((enabled) => !enabled)}
+                >
+                  {openingTreeEnabled ? 'Tree on' : 'Tree off'}
+                </button>
+              </div>
+              <div className="toolbar-description">
+                {loadedPgnFiles.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <span>{loadedPgnFiles.length} file(s), {pgnTotalGames.toLocaleString()} total games:</span>
+                    <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      {loadedPgnFiles.map((fileName) => (
+                        <li key={fileName} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePgnFile(fileName)}
+                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 4px', fontSize: '1.1rem', lineHeight: 1 }}
+                            aria-label={`Remove ${fileName}`}
+                          >✕</button>
+                          <span style={{ fontSize: '0.82rem', wordBreak: 'break-all' }}>{fileName}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  'Load one or more PGN files to build local continuation trees.'
+                )}
+              </div>
+              {isDefaultPgnLoading ? (
+                <p className="toolbar-loading-note">Loading default dataset...</p>
+              ) : null}
+              {pgnProgress.length > 0 ? (
+                <p className="toolbar-description">
+                  {pgnProgress.map((entry) =>
+                    `${entry.fileName}: ${entry.done.toLocaleString()}/${entry.total.toLocaleString()} (${Math.round((entry.done / Math.max(entry.total, 1)) * 100)}%)`
+                  ).join(' | ')}
+                </p>
+              ) : null}
+              {pgnError ? <p className="error-text">{pgnError}</p> : null}
+            </div>
+
+          </div>
+        </aside>
+
+        {/* Center: board */}
+        <section className="board-column">
+          <div className="board-card">
             <ChessHeatmapBoard
               snapshot={snapshot}
               mode={mode}
@@ -968,26 +1005,6 @@ function App() {
             </p>
           </div>
 
-          <div className="metric-grid">
-            <article className="metric-card">
-              <span className="metric-label">White coverage</span>
-              <strong>{whiteCoverage} squares</strong>
-              <p>Strongest pressure: {formatSquareList(topWhiteSquares)}</p>
-            </article>
-
-            <article className="metric-card">
-              <span className="metric-label">Black coverage</span>
-              <strong>{blackCoverage} squares</strong>
-              <p>Strongest pressure: {formatSquareList(topBlackSquares)}</p>
-            </article>
-
-            <article className="metric-card">
-              <span className="metric-label">Most contested</span>
-              <strong>{formatSquareList(topContestedSquares)}</strong>
-              <p>Squares with the heaviest combined pressure from both sides.</p>
-            </article>
-          </div>
-
           {openingTreeEnabled ? (
             <button
               type="button"
@@ -999,42 +1016,8 @@ function App() {
           ) : null}
         </section>
 
+        {/* Right: continuation explorer + square inspector */}
         <aside className="detail-column">
-          <section className="detail-card">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Opening profile</p>
-                <h2>{selectedOpening.name}</h2>
-              </div>
-              <span className="detail-badge">{selectedOpening.eco}</span>
-            </div>
-
-            <p className="detail-copy">{selectedOpening.description}</p>
-
-            <div className="detail-group">
-              <h3>Key ideas</h3>
-              <ul>
-                {selectedOpening.ideas.map((idea) => (
-                  <li key={idea}>{idea}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="detail-group">
-              <h3>Typical mistakes</h3>
-              <ul>
-                {selectedOpening.commonMistakes.map((mistake) => (
-                  <li key={mistake}>{mistake}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="detail-group">
-              <h3>Current line</h3>
-              <p className="move-line">{formatMoveLine(currentLine)}</p>
-            </div>
-          </section>
-
           <section className="detail-card">
             <button
               type="button"
@@ -1048,9 +1031,7 @@ function App() {
                   <h2>Suggestions</h2>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span
-                    className={`detail-badge ${inBook ? 'in-book' : 'out-of-book'}`}
-                  >
+                  <span className={`detail-badge ${inBook ? 'in-book' : 'out-of-book'}`}>
                     {bookStatus === 'loading'
                       ? 'Loading book data'
                       : resolvedSuggestionSource === 'statistics'
@@ -1103,13 +1084,10 @@ function App() {
                     <div className="card-row">
                       <div>
                         <h3>{move.san}</h3>
-                        <p className="detail-copy">
-                          {move.gameCount.toLocaleString()} games
-                        </p>
+                        <p className="detail-copy">{move.gameCount.toLocaleString()} games</p>
                       </div>
                       <span className="percentage-pill">{move.percentage.toFixed(1)}%</span>
                     </div>
-
                     <div className="line-row">
                       <div className="move-buttons">
                         <button
@@ -1124,7 +1102,6 @@ function App() {
                         W {move.white} / D {move.draws} / B {move.black}
                       </div>
                     </div>
-
                     {move.children.length > 0 ? (
                       <ul className="subline-list">
                         {move.children.map((child) => (
@@ -1153,7 +1130,6 @@ function App() {
                     Source: {engineData.sourceLabel}
                   </span>
                 </div>
-
                 {enginePreview ? (
                   <div className="engine-preview-card">
                     <div className="card-row">
@@ -1195,14 +1171,11 @@ function App() {
                     </div>
                   </div>
                 ) : null}
-
                 <div className="analysis-list">
                   {engineData.suggestions.map((suggestion, index) => (
                     <article
                       key={`${suggestion.uci}-${index}`}
-                      className={`analysis-card ${
-                        index === selectedEngineIndex ? 'active' : ''
-                      }`}
+                      className={`analysis-card ${index === selectedEngineIndex ? 'active' : ''}`}
                     >
                       <div className="card-row">
                         <div>
@@ -1211,9 +1184,7 @@ function App() {
                             {formatEngineLine(selectedOpening, userMoves, suggestion)}
                           </p>
                         </div>
-                        <span className="eval-pill">
-                          {formatEngineScore(suggestion)}
-                        </span>
+                        <span className="eval-pill">{formatEngineScore(suggestion)}</span>
                       </div>
                       <div className="move-buttons">
                         <button
@@ -1246,49 +1217,6 @@ function App() {
             )}
           </section>
 
-          {pieceEmphasisMode !== 'off' ? (
-            <section className="detail-card">
-              <div className="detail-group-header">
-                <h3>{keyPieceTitle}</h3>
-                <span className="source-label blue">
-                  {pieceEmphasisMode === 'continuation'
-                    ? 'Based on likely next moves'
-                    : pieceEmphasisMode === 'control'
-                      ? 'Based on current board control'
-                      : 'Blending move likelihood and control'}
-                </span>
-              </div>
-              {keyPieces.length > 0 ? (
-                <div className="key-piece-list">
-                  {keyPieces.map((entry) => (
-                    <div key={entry.piece.square} className="key-piece-row">
-                      <div className="key-piece-copy">
-                        <strong>
-                          {describePiece(entry.piece.type)} on {entry.piece.square}
-                        </strong>
-                        <span className="detail-copy">
-                          {pieceEmphasisMode === 'continuation'
-                            ? `${(entry.continuationScore * 100).toFixed(0)}% continuation relevance`
-                            : pieceEmphasisMode === 'control'
-                              ? `${(entry.controlScore * 100).toFixed(0)}% control contribution`
-                              : `${(entry.score * 100).toFixed(0)}% blended relevance`}
-                        </span>
-                      </div>
-                      <span className="score-pill">
-                        {(entry.score * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="detail-copy">
-                  No standout pieces were identified for this emphasis mode in the current
-                  position.
-                </p>
-              )}
-            </section>
-          ) : null}
-
           <section className="detail-card">
             <div className="section-heading">
               <div>
@@ -1296,11 +1224,9 @@ function App() {
                 <h2>{hoveredSquare ? hoveredSquare.square : 'Hover any square'}</h2>
               </div>
               <span className="detail-badge subtle">
-                Move {snapshot.fullmoveNumber}, {snapshot.turn === 'w' ? 'White' : 'Black'} to
-                move
+                Move {snapshot.fullmoveNumber}, {snapshot.turn === 'w' ? 'White' : 'Black'} to move
               </span>
             </div>
-
             {hoveredSquare ? (
               <div className="inspector">
                 <div className="inspector-metrics">
@@ -1317,7 +1243,6 @@ function App() {
                     <strong>{hoveredSquare.difference}</strong>
                   </div>
                 </div>
-
                 <div className="attacker-columns">
                   <div>
                     <h3>White pressure</h3>
@@ -1333,7 +1258,6 @@ function App() {
                       )}
                     </ul>
                   </div>
-
                   <div>
                     <h3>Black pressure</h3>
                     <ul>
@@ -1357,6 +1281,24 @@ function App() {
               </p>
             )}
           </section>
+
+          <div className="metric-grid metric-grid-stacked">
+            <article className="metric-card">
+              <span className="metric-label">White coverage</span>
+              <strong>{whiteCoverage} squares</strong>
+              <p>Strongest pressure: {formatSquareList(topWhiteSquares)}</p>
+            </article>
+            <article className="metric-card">
+              <span className="metric-label">Black coverage</span>
+              <strong>{blackCoverage} squares</strong>
+              <p>Strongest pressure: {formatSquareList(topBlackSquares)}</p>
+            </article>
+            <article className="metric-card">
+              <span className="metric-label">Most contested</span>
+              <strong>{formatSquareList(topContestedSquares)}</strong>
+              <p>Squares with the heaviest combined pressure from both sides.</p>
+            </article>
+          </div>
         </aside>
       </main>
 
