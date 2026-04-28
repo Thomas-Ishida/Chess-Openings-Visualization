@@ -418,22 +418,29 @@ export function OpeningTree({
       .on('click', (event: MouseEvent, d) => {
         event.stopPropagation()
         setTip(null)
-        onSelectPath(d.data.path)
         if (d.data.hasChildren) {
           setExpandedPathKeys((prev) => {
             const next = new Set(prev)
             const pk = d.data.pathKey
             if (next.has(pk)) {
+              // Collapsing — remove this node and all descendants from expanded set,
+              // but do NOT call onSelectPath so the active line stays unchanged
               for (const key of [...next]) {
                 if (key === pk || key.startsWith(`${pk}>`)) {
                   next.delete(key)
                 }
               }
+              return next
             } else {
+              // Expanding — also navigate to this node
               next.add(pk)
+              onSelectPath(d.data.path)
+              return next
             }
-            return next
           })
+        } else {
+          // Leaf node — always navigate
+          onSelectPath(d.data.path)
         }
       })
 

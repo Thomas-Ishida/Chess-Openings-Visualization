@@ -15,7 +15,7 @@ import {
   type PgnTrieNode,
 } from './opening-tree-types'
 
-const CACHE_VERSION = 3
+const CACHE_VERSION = 4
 const CACHE_PREFIX = 'opening_tree_cache'
 const CHUNK_SIZE = 200
 
@@ -29,9 +29,14 @@ export async function parsePgnTextToBundles(
     const chess = new Chess()
     const sanMoves: string[] = []
     for (const move of opening.moves) {
-      const result = chess.move(move)
-      if (!result) break
-      sanMoves.push(normalizeSan(result.san))
+      try {
+        const result = chess.move(move)
+        if (!result) break
+        sanMoves.push(normalizeSan(result.san))
+      } catch (error) {
+        console.warn(`Skipping invalid move "${move}" in opening: ${opening.name}`)
+        break
+      }
     }
     return { opening, sanMoves }
   })
@@ -99,6 +104,10 @@ export function loadParsedFileCache(fileName: string): {
   } catch {
     return null
   }
+}
+
+export function removeParsedFileCache(fileName: string): void {
+  localStorage.removeItem(cacheKey(fileName))
 }
 
 export function mergeOpeningBundles(
@@ -186,7 +195,7 @@ function buildBranchesRecursive(
 
 function splitGames(pgn: string): string[] {
   return pgn
-    .split(/\r?\n\r?\n(?=\[)/g)
+    .split(/(?=\[Event\s+")/g)
     .map((chunk) => chunk.trim())
     .filter(Boolean)
 }
@@ -202,15 +211,23 @@ function consumeGame(
   if (sanTokens.length === 0) return
   const normalizedHistory = sanTokens.map(normalizeSan)
 
+  let bestMatch: { entry: typeof normalizedOpenings[0]; index: number } | null = null
+
   normalizedOpenings.forEach((entry, index) => {
     if (normalizedHistory.length < entry.sanMoves.length) return
     for (let i = 0; i < entry.sanMoves.length; i += 1) {
       if (normalizedHistory[i] !== entry.sanMoves[i]) return
     }
+    if (!bestMatch || entry.sanMoves.length > bestMatch.entry.sanMoves.length) {
+      bestMatch = { entry, index }
+    }
+  })
 
+  if (bestMatch) {
+    const { entry, index } = bestMatch
     const branchMoves = parseBranchMoves(entry.opening, sanTokens, entry.sanMoves.length, 4)
     insertIntoTrie(bundles[index].trie, branchMoves, result)
-  })
+  }
 }
 
 function parseGameResult(game: string): PgnGameResult | null {
@@ -246,10 +263,7 @@ function normalizeSan(san: string): string {
 }
 
 function tokenizeMoves(game: string): string[] {
-  const bodyStartMatch = game.match(/\r?\n\r?\n/)
-  const body = bodyStartMatch
-    ? game.slice((bodyStartMatch.index ?? 0) + bodyStartMatch[0].length)
-    : game
+  const body = game.replace(/\[.*?\]/g, ' ')
   const withoutComments = body
     .replace(/\{[^}]*\}/g, ' ')
     .replace(/\([^)]*\)/g, ' ')

@@ -832,3 +832,161 @@ input[type='file'] {
     grid-template-columns: 1fr;
   }
 }
+/* ── Decision Tree button (bottom of board card) ───────────────────────── */
+.decision-tree-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.7rem 1.25rem;
+  background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
+  color: #000000;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 32px 64px rgba(15, 23, 42, 0.22);
+  transition: opacity 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+/* .decision-tree-button:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.38);
+} */
+.decision-tree-button:active {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* ── Full-page overlay ─────────────────────────────────────────────────── */
+.decision-tree-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  animation: dtFadeIn 0.18s ease;
+}
+
+@keyframes dtFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.decision-tree-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1400px;
+  background: #faf9f7;
+  overflow: hidden;
+  animation: dtSlideUp 0.22s ease;
+}
+
+@keyframes dtSlideUp {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ── Header bar ────────────────────────────────────────────────────────── */
+.decision-tree-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: #1e3a5f;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.decision-tree-header .eyebrow {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #93c5fd;
+  margin: 0 0 0.2rem;
+}
+
+.decision-tree-header h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+  color: #fff;
+}
+
+.decision-tree-close {
+  padding: 0.45rem 1rem;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.decision-tree-close:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* ── Body: tree left, board right ──────────────────────────────────────── */
+.decision-tree-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.decision-tree-left {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem 0.5rem 1rem 1rem;
+  border-right: 1px solid #e5e1da;
+  min-width: 0;
+}
+
+.decision-tree-right {
+  flex-shrink: 0;
+  width: 520px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1.5rem 1.25rem;
+  overflow-y: auto;
+  background: #fff;
+}
+
+.decision-tree-board-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.decision-tree-board-wrap .move-line {
+  max-width: 440px;
+  text-align: center;
+  word-break: break-word;
+  color: #6b7280;
+}
+
+/* Responsive – on narrow screens stack vertically */
+@media (max-width: 860px) {
+  .decision-tree-body {
+    flex-direction: column;
+  }
+  .decision-tree-left {
+    border-right: none;
+    border-bottom: 1px solid #e5e1da;
+    max-height: 50vh;
+  }
+  .decision-tree-right {
+    width: 100%;
+  }
+}

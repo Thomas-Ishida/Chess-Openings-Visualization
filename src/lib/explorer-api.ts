@@ -1,10 +1,6 @@
 import { Chess, type Square } from 'chess.js'
 
 import type { OpeningDefinition } from './chess-heatmap'
-import {
-  getBundledBookPosition,
-  type BundledExplorerMove,
-} from './bundled-opening-book'
 
 const OPENING_EXPLORER_BASE_URL = 'https://explorer.lichess.ovh'
 const CLOUD_EVAL_BASE_URL = 'https://lichess.org/api/cloud-eval'
@@ -25,7 +21,7 @@ export interface ContinuationMove {
 }
 
 export interface BookLookupResult {
-  source: 'live-book' | 'bundled-book'
+  source: 'live-book'
   openingName?: string
   eco?: string
   white: number
@@ -102,14 +98,14 @@ export async function fetchBookContinuations(
   )
 
   if (!explorerResponse) {
-    return getBundledBookContinuations(fen, rootLine, depth, moveLimit)
+    return null
   }
 
   const totalGames =
     explorerResponse.white + explorerResponse.draws + explorerResponse.black
 
   if (totalGames === 0 || explorerResponse.moves.length === 0) {
-    return getBundledBookContinuations(fen, rootLine, depth, moveLimit)
+    return null
   }
 
   const moves = await Promise.all(
@@ -193,34 +189,6 @@ export function buildInitialMoveHistory(opening: OpeningDefinition): string[] {
   }
 
   return history
-}
-
-function getBundledBookContinuations(
-  fen: string,
-  rootLine: string[],
-  depth: number,
-  moveLimit: number,
-): BookLookupResult | null {
-  const bundled = getBundledBookPosition(fen)
-
-  if (!bundled || bundled.moves.length === 0) {
-    return null
-  }
-
-  const totalGames = bundled.white + bundled.draws + bundled.black
-
-  return {
-    source: 'bundled-book',
-    openingName: bundled.openingName,
-    eco: bundled.eco,
-    white: bundled.white,
-    draws: bundled.draws,
-    black: bundled.black,
-    totalGames,
-    moves: bundled.moves.slice(0, moveLimit).map((move) =>
-      buildBundledContinuation(move, rootLine, totalGames, depth - 1, moveLimit),
-    ),
-  }
 }
 
 async function fetchExplorerNode(
@@ -373,43 +341,6 @@ function parseEngineLine(
     resultingFen: chess.fen(),
     parseStatus: 'full',
     firstMoveSan,
-  }
-}
-
-function buildBundledContinuation(
-  move: BundledExplorerMove,
-  rootLine: string[],
-  totalGames: number,
-  remainingDepth: number,
-  moveLimit: number,
-): ContinuationMove {
-  const nextLine = [...rootLine, move.san]
-  const gameCount = move.white + move.draws + move.black
-
-  return {
-    san: move.san,
-    uci: move.uci,
-    white: move.white,
-    draws: move.draws,
-    black: move.black,
-    gameCount,
-    percentage: totalGames > 0 ? (gameCount / totalGames) * 100 : 0,
-    resultingFen: move.resultingFen,
-    line: nextLine,
-    children:
-      remainingDepth > 0
-        ? move.children
-            .slice(0, moveLimit)
-            .map((child) =>
-              buildBundledContinuation(
-                child,
-                nextLine,
-                gameCount || 1,
-                remainingDepth - 1,
-                moveLimit,
-              ),
-            )
-        : [],
   }
 }
 
