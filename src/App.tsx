@@ -21,7 +21,10 @@ import {
   type SquareControl,
 } from './lib/chess-heatmap'
 import {
+  fetchBookContinuations,
   fetchEngineSuggestions,
+  type BookLookupResult,
+  type ContinuationMove,
   type EngineSuggestion,
 } from './lib/explorer-api'
 import {
@@ -32,11 +35,7 @@ import {
   saveParsedFileCache,
   removeParsedFileCache,
 } from './lib/pgn-parser'
-import type {
-  OpeningTreeBranch,
-  OpeningTrieBundle,
-  PgnProgressSnapshot,
-} from './lib/opening-tree-types'
+import type { OpeningTrieBundle, PgnProgressSnapshot } from './lib/opening-tree-types'
 
 const openings = openingsData as OpeningDefinition[]
 const DEFAULT_PGN_FILE_NAME = 'lichess_elite_2025-11-top50-capped-1000.pgn'
@@ -86,6 +85,11 @@ function App() {
   const [hoveredSquare, setHoveredSquare] = useState<SquareControl | null>(null)
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null)
   const [userMoves, setUserMoves] = useState<string[]>([])
+  const [bookData, setBookData] = useState<BookLookupResult | null>(null)
+  const [bookStatus, setBookStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>(
+    'idle',
+  )
+  const [bookError, setBookError] = useState<string | null>(null)
   const [engineData, setEngineData] = useState<Awaited<
     ReturnType<typeof fetchEngineSuggestions>
   > | null>(null)
@@ -211,11 +215,56 @@ function App() {
   useEffect(() => {
     const controller = new AbortController()
 
+    async function loadBook() {
+      setBookStatus('loading')
+      setBookError(null)
+      setBookData(null)
+      setEngineData(null)
+      setEngineStatus('idle')
+      setEngineError(null)
+      setSelectedEngineIndex(0)
+
+      try {
+        const result = await fetchBookContinuations(snapshot.fen, currentLine, {
+          depth: 3,
+          moves: 5,
+          signal: controller.signal,
+        })
+
+        if (controller.signal.aborted) return
+
+        if (result) {
+          setBookData(result)
+          setBookStatus('ready')
+          return
+        }
+
+        setBookData(null)
+        setBookStatus('ready')
+      } catch (error) {
+        if (controller.signal.aborted) return
+
+        setBookStatus('error')
+        setBookError(error instanceof Error ? error.message : 'Book lookup failed.')
+      }
+    }
+
+    void loadBook()
+
+    return () => {
+      controller.abort()
+    }
+  }, [currentLine, snapshot.fen])
+
+  useEffect(() => {
+    if (bookStatus !== 'ready' || bookData) return
+
+    const controller = new AbortController()
+
     async function loadEngine() {
       setEngineStatus('loading')
       setEngineError(null)
       setEngineData(null)
-      setSelectedEngineIndex(0)
 
       try {
         const result = await fetchEngineSuggestions(snapshot.fen, controller.signal)
@@ -244,7 +293,7 @@ function App() {
     return () => {
       controller.abort()
     }
-  }, [snapshot.fen])
+  }, [bookData, bookStatus, snapshot.fen])
 
   const whiteCoverage = useMemo(
     () => snapshot.controls.filter((control) => control.whiteCount > 0).length,
@@ -267,24 +316,6 @@ function App() {
     [snapshot.controls],
   )
 
-  const pgnTreeBranchesAtTabiya = useMemo(
-    () => buildOpeningTreeBranches(selectedOpening, openingTries, []),
-    [openingTries, selectedOpening],
-  )
-  const pgnBranchesAtPosition = useMemo(
-    () => buildOpeningTreeBranches(selectedOpening, openingTries, userMoves),
-    [openingTries, selectedOpening, userMoves],
-  )
-  const inBook = pgnBranchesAtPosition.length > 0
-  const canUndo = userMoves.length > 0
-  const resolvedSuggestionSource = useMemo(() => {
-    if (suggestionSourceMode === 'statistics') return inBook ? 'statistics' : 'none'
-    if (suggestionSourceMode === 'engine') return engineData ? 'engine' : 'none'
-    if (inBook) return 'statistics'
-    if (engineData) return 'engine'
-    return 'none'
-  }, [engineData, inBook, suggestionSourceMode])
-
   const legalMovesFromSelection = useMemo(
     () =>
       selectedSquare ? getLegalMovesForSquare(snapshot, selectedSquare) : [],
@@ -297,33 +328,32 @@ function App() {
 
   const continuationScores = useMemo(() => {
     const scores: Partial<Record<Square, number>> = {}
-    const branches = pgnBranchesAtPosition
+    const moves = bookData?.moves ?? []
 
-    if (branches.length === 0) return scores
+    if (moves.length === 0) return scores
 
     let maxScore = 0
 
-    for (const branch of branches) {
-      const legalMove = snapshot.legalMoves.find((candidate) => candidate.uci === branch.uci)
+    for (const move of moves) {
+      const legalMove = snapshot.legalMoves.find((candidate) => candidate.uci === move.uci)
 
       if (legalMove) {
-        scores[legalMove.from] = (scores[legalMove.from] ?? 0) + branch.frequency
+        scores[legalMove.from] = (scores[legalMove.from] ?? 0) + move.percentage
         maxScore = Math.max(maxScore, scores[legalMove.from] ?? 0)
-      }
+        for (const child of move.children) {
+          const childChess = createChessFromOpening(selectedOpening, userMoves)
 
-      for (const child of branch.children) {
-        const childChess = createChessFromOpening(selectedOpening, userMoves)
+          if (!applyUciMove(childChess, move.uci)) continue
 
-        if (!applyUciMove(childChess, branch.uci)) continue
+          const childSnapshot = buildPositionSnapshotFromChess(childChess)
+          const childMove = childSnapshot.legalMoves.find(
+            (candidate) => candidate.uci === child.uci,
+          )
 
-        const childSnapshot = buildPositionSnapshotFromChess(childChess)
-        const childMove = childSnapshot.legalMoves.find(
-          (candidate) => candidate.uci === child.uci,
-        )
-
-        if (childMove) {
-          scores[childMove.from] = (scores[childMove.from] ?? 0) + child.frequency * 0.5
-          maxScore = Math.max(maxScore, scores[childMove.from] ?? 0)
+          if (childMove) {
+            scores[childMove.from] = (scores[childMove.from] ?? 0) + child.percentage
+            maxScore = Math.max(maxScore, scores[childMove.from] ?? 0)
+          }
         }
       }
     }
@@ -333,7 +363,7 @@ function App() {
     return Object.fromEntries(
       Object.entries(scores).map(([square, score]) => [square, score / maxScore]),
     ) as Partial<Record<Square, number>>
-  }, [pgnBranchesAtPosition, selectedOpening, snapshot.legalMoves, userMoves])
+  }, [bookData, selectedOpening, snapshot.legalMoves, userMoves])
 
   const controlScores = useMemo(() => {
     const scores: Partial<Record<Square, number>> = {}
@@ -376,6 +406,24 @@ function App() {
     ) as Partial<Record<Square, number>>
   }, [continuationScores, controlScores, pieceEmphasisMode, snapshot.pieces])
 
+  const inBook = Boolean(bookData && bookData.moves.length > 0)
+  const pgnTreeBranchesAtTabiya = useMemo(
+    () => buildOpeningTreeBranches(selectedOpening, openingTries, []),
+    [openingTries, selectedOpening],
+  )
+  const pgnBranchesAtPosition = useMemo(
+    () => buildOpeningTreeBranches(selectedOpening, openingTries, userMoves),
+    [openingTries, selectedOpening, userMoves],
+  )
+  const canUndo = userMoves.length > 0
+  const resolvedSuggestionSource = useMemo(() => {
+    if (suggestionSourceMode === 'statistics') return inBook ? 'statistics' : 'none'
+    if (suggestionSourceMode === 'engine') return engineData ? 'engine' : 'none'
+    if (inBook) return 'statistics'
+    if (engineData) return 'engine'
+    return 'none'
+  }, [engineData, inBook, suggestionSourceMode])
+  
   const selectedEngineSuggestion = useMemo(
     () => engineData?.suggestions[selectedEngineIndex] ?? engineData?.suggestions[0] ?? null,
     [engineData, selectedEngineIndex],
@@ -504,7 +552,7 @@ function App() {
     setSelectedSquare(null)
   }
 
-  function handleApplyContinuation(move: OpeningTreeBranch) {
+  function handleApplyContinuation(move: ContinuationMove) {
     const legalMove = snapshot.legalMoves.find((candidate) => candidate.uci === move.uci)
 
     if (!legalMove) return
@@ -768,6 +816,9 @@ function App() {
                   setUserMoves([])
                   setHoveredSquare(null)
                   setSelectedSquare(null)
+                  setBookData(null)
+                  setBookStatus('idle')
+                  setBookError(null)
                   setEngineData(null)
                   setEngineStatus('idle')
                   setEngineError(null)
@@ -784,7 +835,7 @@ function App() {
 
             <div className="sidebar-group">
               <span className="toolbar-label">Heatmap mode</span>
-              <div className="mode-toggle" role="tablist" aria-label="Heatmap modes">
+              <div className="mode-toggle piece-toggle" role="tablist" aria-label="Heatmap modes">
                 <button
                   type="button"
                   className={`mode-button piece-btn ${mode === 'white' ? 'active' : ''}`}
@@ -981,10 +1032,10 @@ function App() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span className={`detail-badge ${inBook ? 'in-book' : 'out-of-book'}`}>
-                    {isDefaultPgnLoading
-                      ? 'Loading PGN'
+                    {bookStatus === 'loading'
+                      ? 'Loading book data'
                       : resolvedSuggestionSource === 'statistics'
-                        ? 'PGN stats'
+                        ? 'Live book'
                         : resolvedSuggestionSource === 'engine'
                           ? 'Engine'
                           : 'No data'}
@@ -1008,7 +1059,7 @@ function App() {
               ))}
             </div>
 
-            {suggestionSourceMode === 'statistics' && !inBook && !isDefaultPgnLoading ? (
+            {suggestionSourceMode === 'statistics' && !inBook && bookStatus === 'ready' ? (
               <p className="detail-copy">
                 No statistical suggestions are available for this position. Switch to Engine
                 or Auto to see engine analysis.
@@ -1018,24 +1069,24 @@ function App() {
               engineStatus !== 'loading' ? (
               <p className="detail-copy">
                 No cloud engine evaluation is available for this position. Switch to
-                Statistics or Auto if PGN tree data exists.
+                Statistics or Auto if opening-book data exists.
               </p>
-            ) : isDefaultPgnLoading && suggestionSourceMode !== 'engine' ? (
-              <p className="detail-copy">Loading PGN tree data for statistical suggestions.</p>
-            ) : pgnError && suggestionSourceMode !== 'engine' ? (
+            ) : bookStatus === 'loading' && suggestionSourceMode !== 'engine' ? (
+              <p className="detail-copy">Looking up real-game continuations for this position.</p>
+            ) : bookStatus === 'error' && suggestionSourceMode !== 'engine' ? (
               <p className="error-text">
-                {pgnError ?? 'The PGN dataset could not be processed.'}
+                {bookError ?? 'The real-game continuation service could not be reached.'}
               </p>
-            ) : resolvedSuggestionSource === 'statistics' && inBook ? (
+            ) : resolvedSuggestionSource === 'statistics' && inBook && bookData ? (
               <div className="continuation-list">
-                {pgnBranchesAtPosition.map((move) => (
+                {bookData.moves.map((move) => (
                   <article key={move.uci} className="continuation-card">
                     <div className="card-row">
                       <div>
                         <h3>{move.san}</h3>
-                        <p className="detail-copy">{move.games.toLocaleString()} games</p>
+                        <p className="detail-copy">{move.gameCount.toLocaleString()} games</p>
                       </div>
-                      <span className="percentage-pill">{move.frequency.toFixed(1)}%</span>
+                      <span className="percentage-pill">{move.percentage.toFixed(1)}%</span>
                     </div>
                     <div className="line-row">
                       <div className="move-buttons">
@@ -1048,15 +1099,14 @@ function App() {
                         </button>
                       </div>
                       <div className="detail-copy">
-                        W {move.winRate[0].toFixed(0)} / D {move.winRate[1].toFixed(0)} / B{' '}
-                        {move.winRate[2].toFixed(0)}
+                        W {move.white} / D {move.draws} / B {move.black}
                       </div>
                     </div>
                     {move.children.length > 0 ? (
                       <ul className="subline-list">
                         {move.children.map((child) => (
                           <li key={`${move.uci}-${child.uci}`}>
-                            <strong>{child.san}</strong> - {child.frequency.toFixed(1)}%
+                            <strong>{child.san}</strong> - {child.percentage.toFixed(1)}%
                           </li>
                         ))}
                       </ul>
@@ -1166,49 +1216,6 @@ function App() {
             </>
             )}
           </section>
-
-          {pieceEmphasisMode !== 'off' ? (
-            <section className="detail-card">
-              <div className="detail-group-header">
-                <h3>{keyPieceTitle}</h3>
-                <span className="source-label blue">
-                  {pieceEmphasisMode === 'continuation'
-                    ? 'Based on tree continuation percentages'
-                    : pieceEmphasisMode === 'control'
-                      ? 'Based on current board control'
-                      : 'Blending tree continuation and control'}
-                </span>
-              </div>
-              {keyPieces.length > 0 ? (
-                <div className="key-piece-list">
-                  {keyPieces.map((entry) => (
-                    <div key={entry.piece.square} className="key-piece-row">
-                      <div className="key-piece-copy">
-                        <strong>
-                          {describePiece(entry.piece.type)} on {entry.piece.square}
-                        </strong>
-                        <span className="detail-copy">
-                          {pieceEmphasisMode === 'continuation'
-                            ? `${(entry.continuationScore * 100).toFixed(0)}% of local continuations involve this piece`
-                            : pieceEmphasisMode === 'control'
-                              ? `${(entry.controlScore * 100).toFixed(0)}% control contribution`
-                              : `${(entry.score * 100).toFixed(0)}% blended relevance`}
-                        </span>
-                      </div>
-                      <span className="score-pill">
-                        {(entry.score * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="detail-copy">
-                  No standout pieces were identified for this emphasis mode in the current
-                  position.
-                </p>
-              )}
-            </section>
-          ) : null}
 
           <section className="detail-card">
             <div className="section-heading">
