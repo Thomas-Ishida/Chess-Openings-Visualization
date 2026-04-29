@@ -1,0 +1,382 @@
+[
+  {
+    "id": "sicilian-defense",
+    "name": "Sicilian Defense",
+    "eco": "B20",
+    "moves": ["e4", "c5"],
+    "description": "The Sicilian Defense is the most popular and best-scoring response to 1.e4. Black immediately fights for the center asymmetrically, creating rich imbalanced positions that offer winning chances for both sides.",
+    "ideas": [
+      "Control the d4 square without allowing White a strong pawn center",
+      "Counter-attack on the queenside with ...a5 or ...b5 expansions",
+      "Use the half-open c-file for rook activity",
+      "Aim for dynamic counter-play rather than pure equality"
+    ],
+    "commonMistakes": [
+      "Playing too passively and allowing White a free kingside attack",
+      "Neglecting development in favor of early pawn grabs",
+      "Castling kingside without considering the safety of the position",
+      "Missing tactical shots in sharp Najdorf or Dragon variations"
+    ]
+  },
+  {
+    "id": "english-opening",
+    "name": "English Opening",
+    "eco": "A10",
+    "moves": ["c4"],
+    "description": "The English Opening is a flexible flank opening where White stakes a claim on the d5 square from the side. It often transposes into various queen's pawn structures and suits positional players who prefer slow maneuvering.",
+    "ideas": [
+      "Control d5 with the c4 pawn without committing the d-pawn early",
+      "Develop the knight to c3 to reinforce the d5 pressure",
+      "Transpose into favorable Queen's Gambit or Reti structures",
+      "Keep the position flexible and deny Black easy central breaks"
+    ],
+    "commonMistakes": [
+      "Allowing Black to establish a strong pawn center with ...d5 and ...e5",
+      "Losing control of the d4 square by advancing pawns too quickly",
+      "Failing to coordinate pieces after unconventional Black responses",
+      "Transposing into structures you haven't studied"
+    ]
+  },
+  {
+    "id": "ruy-lopez",
+    "name": "Ruy Lopez",
+    "eco": "C60",
+    "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5"],
+    "description": "The Ruy Lopez, or Spanish Game, is one of the oldest and most respected openings in chess. White pins the knight that defends the e5 pawn, creating long-term pressure on Black's position.",
+    "ideas": [
+      "Put pressure on the e5 pawn indirectly via the Bb5 pin",
+      "Castle kingside quickly and build a strong center with d4",
+      "Use the long-term bind on the queenside to restrict Black",
+      "Transition into favorable endgames with a structural advantage"
+    ],
+    "commonMistakes": [
+      "Retreating the bishop too early without extracting concessions",
+      "Allowing the Marshall Attack without preparation",
+      "Neglecting the d4 break, giving Black too much time",
+      "Over-extending on the kingside before consolidating the center"
+    ]
+  },
+  {
+    "id": "french-defense",
+    "name": "French Defense",
+    "eco": "C00",
+    "moves": ["e4", "e6"],
+    "description": "The French Defense is a solid and combative reply to 1.e4. Black accepts a slightly cramped position in exchange for a solid pawn structure and active counter-play, particularly on the queenside.",
+    "ideas": [
+      "Build a solid pawn chain with ...e6 and ...d5",
+      "Counter-attack White's center with ...c5 at the right moment",
+      "Use the c-file and queenside majority in the endgame",
+      "Keep the position solid and wait for White to overextend"
+    ],
+    "commonMistakes": [
+      "Releasing central tension too early with ...dxe4",
+      "Developing the light-squared bishop too late — it is the 'bad' bishop",
+      "Neglecting the ...c5 break, the key counter-punch of the French",
+      "Allowing White a free kingside attack in the Advance Variation"
+    ]
+  },
+  {
+    "id": "caro-kann-defense",
+    "name": "Caro-Kann Defense",
+    "eco": "B10",
+    "moves": ["e4", "c6"],
+    "description": "The Caro-Kann is a solid and resilient defense to 1.e4. Black prepares to challenge the center with ...d5 while keeping the c6 square for the pawn rather than a knight, ensuring a slightly freer game than the French Defense.",
+    "ideas": [
+      "Support a ...d5 advance with the c6 pawn for solid central play",
+      "Develop the light-squared bishop outside the pawn chain before closing it",
+      "Aim for a solid endgame where Black's pawn structure is slightly superior",
+      "Use ...c5 to challenge White's center in the right moment"
+    ],
+    "commonMistakes": [
+      "Playing ...e6 too early, blocking the light-squared bishop like in the French",
+      "Failing to complete development after winning the bishop pair",
+      "Being too passive and allowing White a free kingside attack",
+      "Neglecting piece activity in the endgame despite better pawn structure"
+    ]
+  },
+  {
+    "id": "queens-pawn-game",
+    "name": "Queen's Pawn Game",
+    "eco": "D00",
+    "moves": ["d4", "d5"],
+    "description": "The Queen's Pawn Game encompasses a wide range of structures arising after 1.d4 d5. It is a rich and strategically complex opening family that rewards long-term planning and piece coordination over tactical fireworks.",
+    "ideas": [
+      "Control the center with pawns on d4 and c4 (Queen's Gambit)",
+      "Develop pieces harmoniously and fight for the e5 square",
+      "Use the d-file and central majority to create endgame advantages",
+      "Keep the tension in the center rather than releasing it prematurely"
+    ],
+    "commonMistakes": [
+      "Accepting the Queen's Gambit without understanding the resulting structures",
+      "Releasing central tension too early with ...dxc4 or dxe4",
+      "Developing the queen too early to c2 or b3 without purpose",
+      "Allowing an isolated d-pawn without adequate compensation"
+    ]
+  },
+  {
+    "id": "queens-gambit-declined",
+    "name": "Queen's Gambit Declined",
+    "eco": "D30",
+    "moves": ["d4", "d5", "c4", "e6"],
+    "description": "The Queen's Gambit Declined is one of the most respected and solid defenses in chess. Black declines the gambit pawn and builds a robust central pawn structure, aiming for counterplay with ...c5 or ...e5 later.",
+    "ideas": [
+      "Maintain a solid central pawn structure with pawns on d5 and e6",
+      "Develop pieces to natural squares and castle kingside safely",
+      "Counter with ...c5 to challenge White's d4 pawn at the right moment",
+      "Use the half-open c-file after ...dxc4 exchanges"
+    ],
+    "commonMistakes": [
+      "Playing ...Bd6 without preparation, blocking the c6 knight development",
+      "Neglecting the ...c5 counter, becoming too passive",
+      "Allowing White a strong minority attack on the queenside",
+      "Trading the wrong pieces and ending up in an unfavorable endgame"
+    ]
+  },
+  {
+    "id": "zukertort-opening",
+    "name": "Zukertort Opening",
+    "eco": "A04",
+    "moves": ["Nf3"],
+    "description": "The Zukertort Opening, beginning with 1.Nf3, is a flexible and transpositional move order. White develops naturally and keeps maximum options open, often steering into Reti, English, or Queen's Pawn structures depending on Black's response.",
+    "ideas": [
+      "Develop the knight to its best square without committing the center pawns",
+      "Keep the position flexible and transpose based on Black's choice",
+      "Control e5 and d4 from a distance before deciding on a pawn structure",
+      "Avoid symmetrical positions that give Black easy equality"
+    ],
+    "commonMistakes": [
+      "Failing to have a follow-up plan and drifting into inferior versions of mainlines",
+      "Allowing Black to establish a strong center with ...d5 and ...e5 unopposed",
+      "Transposing into lines you haven't studied by being too flexible",
+      "Neglecting development of the queenside pieces"
+    ]
+  },
+  {
+    "id": "kings-indian-defense",
+    "name": "King's Indian Defense",
+    "eco": "E60",
+    "moves": ["d4", "Nf6", "c4", "g6"],
+    "description": "The King's Indian Defense is a dynamic and combative opening where Black allows White to build a large center, then strikes back with ...e5 or ...c5. It is a favorite of attacking players who relish complex, double-edged positions.",
+    "ideas": [
+      "Allow White a big center then undermine it with ...e5 or ...c5",
+      "Generate a kingside attack after castling with f7-f5 advances",
+      "Use the g7 bishop as a powerful long-range piece once the center opens",
+      "Create dynamic counter-play even from cramped positions"
+    ],
+    "commonMistakes": [
+      "Playing too slowly and allowing White to consolidate the center",
+      "Missing the key ...e5 break at the right moment",
+      "Neglecting the queenside entirely while pursuing the kingside attack",
+      "Allowing the g7 bishop to become permanently blocked"
+    ]
+  },
+  {
+    "id": "indian-defense",
+    "name": "Indian Defense",
+    "eco": "A45",
+    "moves": ["d4", "Nf6"],
+    "description": "The Indian Defense is a broad family of openings where Black replies to 1.d4 with 1...Nf6, avoiding an immediate central confrontation. It includes the King's Indian, Nimzo-Indian, Queen's Indian, and many other systems.",
+    "ideas": [
+      "Control the center indirectly with pieces rather than pawns",
+      "Keep the pawn structure flexible before committing",
+      "Use the Nf6 knight to control e4 and d5 from the flank",
+      "Transpose into the specific Indian system best suited to the position"
+    ],
+    "commonMistakes": [
+      "Failing to challenge the center at any point, becoming too passive",
+      "Allowing White to establish an overwhelming d4-e4-c4 center",
+      "Choosing the wrong specific Indian system for the resulting structure",
+      "Neglecting pawn breaks that are specific to the chosen variation"
+    ]
+  },
+  {
+    "id": "italian-game",
+    "name": "Italian Game",
+    "eco": "C50",
+    "moves": ["e4", "e5", "Nf3", "Nc6", "Bc4"],
+    "description": "The Italian Game is one of the oldest openings in chess. White aims the bishop at the f7 square and prepares to control the center. Modern theory has revived it into a rich positional battleground with many subtleties.",
+    "ideas": [
+      "Target the f7 square with the Bc4 bishop for early pressure",
+      "Build a strong center with d3 and c3 followed by d4",
+      "Castle kingside and prepare long-term piece activity",
+      "Use the bishop pair in open positions after central exchanges"
+    ],
+    "commonMistakes": [
+      "Playing the aggressive but dubious Evans Gambit without preparation",
+      "Allowing Black to equalize easily with the Two Knights Defense tactics",
+      "Moving the bishop multiple times in the opening without gaining tempo",
+      "Neglecting the d4 central break at the right moment"
+    ]
+  },
+  {
+    "id": "kings-indian-attack",
+    "name": "King's Indian Attack",
+    "eco": "A07",
+    "moves": ["Nf3", "d5", "g3"],
+    "description": "The King's Indian Attack is a system White can use against many Black setups. White fianchettoes the king's bishop, castles kingside, and launches a systematic attack with e4, d3, Nbd2 and eventually e5 or f4.",
+    "ideas": [
+      "Set up the standard formation: Nf3, g3, Bg2, 0-0, d3, Nbd2, e4",
+      "Launch a kingside attack with f4-f5 or e4-e5 at the right moment",
+      "Use the g2 bishop as a long-range piece targeting the queenside",
+      "Maintain flexibility to redirect the attack based on Black's setup"
+    ],
+    "commonMistakes": [
+      "Attacking too early before completing the standard setup",
+      "Allowing Black to counter in the center before the kingside attack begins",
+      "Playing f4 without adequate preparation, weakening the kingside",
+      "Neglecting queenside development entirely while attacking kingside"
+    ]
+  },
+  {
+    "id": "modern-defense",
+    "name": "Modern Defense",
+    "eco": "B06",
+    "moves": ["e4", "g6"],
+    "description": "The Modern Defense is a hypermodern opening where Black delays occupying the center with pawns, instead developing the bishop to g7 and inviting White to build a large center that will later be undermined.",
+    "ideas": [
+      "Fianchetto the king's bishop to g7 for long-range pressure on d4",
+      "Allow White to build a center then undermine it with ...c5 or ...d5",
+      "Keep the position flexible before committing to a specific plan",
+      "Use the g7 bishop to create imbalances and counter-attacking chances"
+    ],
+    "commonMistakes": [
+      "Delaying development too long and allowing White to attack freely",
+      "Failing to challenge White's center before it becomes too strong",
+      "Allowing the g7 bishop to become permanently blocked",
+      "Being too passive and never generating meaningful counter-play"
+    ]
+  },
+  {
+    "id": "nimzo-larsen",
+    "name": "Nimzo-Larsen Attack",
+    "eco": "A01",
+    "moves": ["b3"],
+    "description": "The Nimzo-Larsen Attack, popularized by Bent Larsen, is a hypermodern flank opening. White fianchettoes the queen's bishop to b2 to exert pressure along the long diagonal and control the center from afar.",
+    "ideas": [
+      "Fianchetto the bishop to b2 for long-diagonal pressure toward e5",
+      "Control e5 and d4 from a distance without early pawn commitments",
+      "Develop flexibly and transpose into favorable structures",
+      "Use the b2 bishop as a powerful attacking piece in open positions"
+    ],
+    "commonMistakes": [
+      "Allowing Black to shut down the b2 bishop with ...e5 and ...d5",
+      "Neglecting kingside development while focusing on the queenside bishop",
+      "Failing to support the b2 bishop when it becomes under attack",
+      "Being too slow and allowing Black to equalize comfortably"
+    ]
+  },
+  {
+    "id": "slav-defense",
+    "name": "Slav Defense",
+    "eco": "D10",
+    "moves": ["d4", "d5", "c4", "c6"],
+    "description": "The Slav Defense is a solid and popular reply to the Queen's Gambit. Black supports the d5 pawn with ...c6, keeping the light-squared bishop's diagonal open — a key improvement over the Queen's Gambit Declined.",
+    "ideas": [
+      "Support d5 with c6 while keeping the c8 bishop's diagonal open",
+      "Develop the light-squared bishop before closing the position",
+      "Counter-attack with ...dxc4 followed by ...b5 to keep the pawn",
+      "Use the solid pawn structure to transition into favorable endgames"
+    ],
+    "commonMistakes": [
+      "Playing ...e6 too early, reverting to a Queen's Gambit Declined structure",
+      "Accepting the gambit pawn with ...dxc4 without a concrete plan to hold it",
+      "Allowing White a strong minority attack on the queenside",
+      "Neglecting the ...c5 break that gives Black active counter-play"
+    ]
+  },
+  {
+    "id": "nimzo-indian-defense",
+    "name": "Nimzo-Indian Defense",
+    "eco": "E20",
+    "moves": ["d4", "Nf6", "c4", "e6", "Nc3", "Bb4"],
+    "description": "The Nimzo-Indian Defense is one of the most respected openings in chess. Black pins the c3 knight and prepares to double White's pawns, in exchange giving up the bishop pair but gaining lasting structural pressure.",
+    "ideas": [
+      "Pin the c3 knight with ...Bb4 to prevent e4 and double White's pawns",
+      "Exchange the bishop for the knight to saddle White with doubled c-pawns",
+      "Use the resulting pawn structure to restrain White's center",
+      "Develop harmoniously and exploit the weaknesses on c4 and e4"
+    ],
+    "commonMistakes": [
+      "Releasing the pin too early without extracting structural concessions",
+      "Failing to exploit the doubled pawns in the endgame",
+      "Neglecting development while focusing on the bishop pin",
+      "Allowing White to free the position with e3-e4 without challenge"
+    ]
+  },
+  {
+    "id": "pirc-defense",
+    "name": "Pirc Defense",
+    "eco": "B07",
+    "moves": ["e4", "d6", "d4", "Nf6"],
+    "description": "The Pirc Defense is a hypermodern opening where Black allows White to establish a strong center and then attacks it with pieces. It is flexible and leads to rich positions but requires precise knowledge.",
+    "ideas": [
+      "Allow White to build the center then undermine it with ...c5 or ...e5",
+      "Fianchetto the king's bishop with ...g6 and ...Bg7 for counter-pressure",
+      "Use the flexible pawn structure to redirect the game based on White's play",
+      "Generate queenside counter-play to balance White's central space"
+    ],
+    "commonMistakes": [
+      "Being too passive and allowing White to attack freely on the kingside",
+      "Failing to challenge the center at the right moment with ...c5 or ...e5",
+      "Allowing the g7 bishop to become permanently restricted",
+      "Missing tactical opportunities that arise in the complex positions"
+    ]
+  },
+  {
+    "id": "benoni-defense",
+    "name": "Benoni Defense",
+    "eco": "A60",
+    "moves": ["d4", "Nf6", "c4", "c5", "d5"],
+    "description": "The Benoni Defense is a sharp and dynamic opening where Black immediately challenges White's d4 pawn. After White advances with d5, Black gets a queenside majority and active piece play in exchange for a space disadvantage.",
+    "ideas": [
+      "Challenge d4 immediately with ...c5 to create dynamic imbalances",
+      "Use the queenside pawn majority for long-term pressure after ...b5",
+      "Develop the g7 bishop as a powerful long-range attacking piece",
+      "Generate active counter-play on the queenside before White attacks"
+    ],
+    "commonMistakes": [
+      "Playing too slowly and allowing White to launch a devastating kingside attack",
+      "Neglecting the ...b5 queenside advance that is key to Black's strategy",
+      "Allowing White to close the position before Black's pieces are active",
+      "Underestimating White's kingside attack in the main lines"
+    ]
+  },
+  {
+    "id": "scandinavian-defense",
+    "name": "Scandinavian Defense",
+    "eco": "B01",
+    "moves": ["e4", "d5"],
+    "description": "The Scandinavian Defense is a direct and principled reply to 1.e4. Black immediately challenges the center with ...d5, forcing White to capture or allow Black easy equality. It leads to solid and well-understood positions.",
+    "ideas": [
+      "Immediately challenge White's e4 pawn with ...d5 on move one",
+      "After exd5, recapture with ...Qxd5 or ...Nf6 depending on the desired setup",
+      "Develop pieces quickly and neutralize White's opening advantage",
+      "Use the solid pawn structure to counter-attack in the middlegame"
+    ],
+    "commonMistakes": [
+      "Moving the queen too many times after ...Qxd5 and losing tempos",
+      "Playing too passively after the center is simplified",
+      "Neglecting the c-file counter-play that gives Black activity",
+      "Allowing White to develop freely while the queen is misplaced"
+    ]
+  },
+  {
+    "id": "catalan-opening",
+    "name": "Catalan Opening",
+    "eco": "E00",
+    "moves": ["d4", "Nf6", "c4", "e6", "g3"],
+    "description": "The Catalan Opening combines a Queen's Gambit setup with a kingside fianchetto. White builds a powerful strategic position where the g2 bishop exerts long-term pressure down the long diagonal, particularly targeting the c6-e4 diagonal.",
+    "ideas": [
+      "Fianchetto the g2 bishop for long-term pressure along the a8-h1 diagonal",
+      "Build a strong center with c4 and d4, supported by the fianchettoed bishop",
+      "Use the open c-file after ...dxc4 to create long-term pressure",
+      "Transition to favorable endgames where the bishop pair is dominant"
+    ],
+    "commonMistakes": [
+      "Playing too quickly and allowing Black to hold the extra pawn after ...dxc4",
+      "Neglecting development of the queenside pieces while focusing on the bishop",
+      "Allowing Black to neutralize the g2 bishop with ...Bb4+ or ...c5",
+      "Over-extending the center before piece development is complete"
+    ]
+  }
+]
