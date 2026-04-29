@@ -184,7 +184,9 @@ export function OpeningTree({
   useEffect(() => {
     if (!svgRef.current || !data) return
 
-    const svg = d3.select(svgRef.current)
+    const currentSvg = svgRef.current
+
+    const svg = d3.select(currentSvg)
     svg.selectAll('*').remove()
     setTip(null)
 
@@ -444,12 +446,12 @@ export function OpeningTree({
         }
       })
 
-    d3.select(svgRef.current).on('click', () => {
+    d3.select(currentSvg).on('click', () => {
       setTip(null)
     })
 
     return () => {
-      d3.select(svgRef.current).on('click', null)
+      d3.select(currentSvg).on('click', null)
     }
   }, [data, onSelectPath, activePath])
 

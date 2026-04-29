@@ -33,7 +33,7 @@ export async function parsePgnTextToBundles(
         const result = chess.move(move)
         if (!result) break
         sanMoves.push(normalizeSan(result.san))
-      } catch (error) {
+      } catch {
         console.warn(`Skipping invalid move "${move}" in opening: ${opening.name}`)
         break
       }
@@ -224,7 +224,10 @@ function consumeGame(
   })
 
   if (bestMatch) {
-    const { entry, index } = bestMatch
+    const { entry, index } = bestMatch as {
+      entry: { opening: OpeningDefinition; sanMoves: string[] }
+      index: number
+    }
     const branchMoves = parseBranchMoves(entry.opening, sanTokens, entry.sanMoves.length, 4)
     insertIntoTrie(bundles[index].trie, branchMoves, result)
   }
