@@ -124,3 +124,19 @@ The heatmap is calculated from the current board state using pseudo-legal square
 ### Install dependencies
 ```bash
 npm install
+```
+### Start the development server
+```bash
+npm run dev
+```
+## Why This Project
+Traditional opening study often relies on static notation and memorization.
+
+This project takes a more visual approach by combining:
+* chess rules
+* data-driven continuation analysis
+* engine fallback
+* D3-based visualizations
+
+The result is a tool designed to help players see openings as structures of pressure, space, and branching decisions, rather than just move sequences.
+
