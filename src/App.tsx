@@ -41,6 +41,7 @@ import type {
 const openings = openingsData as OpeningDefinition[]
 const DEFAULT_PGN_FILE_NAME = 'lichess_elite_2025-11-top50-capped-1000.pgn'
 
+// Updated MODE_COPY to handle 'none'
 const MODE_COPY: Record<
   HeatmapMode,
   { label: string; description: string; summary: string }
@@ -60,6 +61,11 @@ const MODE_COPY: Record<
     description:
       'Blue favors White, orange favors Black, and muted gray marks balanced control.',
     summary: 'This mode reveals neutral zones and the side that owns more space overall.',
+  },
+  none: {
+    label: 'No heatmap',
+    description: 'Shows the standard chessboard without any control overlays.',
+    summary: 'Standard view.',
   },
 }
 
@@ -133,6 +139,32 @@ function App() {
 
     return sanMoves
   }, [selectedOpening, userMoves])
+
+  const openingColorLabel = useMemo(() => {
+    const isBlackOpening =
+      selectedOpening.name.includes('Defense') ||
+      selectedOpening.name.includes('Declined')
+    return isBlackOpening ? "Black's opening" : "White's opening"
+  }, [selectedOpening.name])
+  
+  // Calculate if the board should be flipped
+  const isFlipped = openingColorLabel === "Black's opening"
+
+  const openingStats = useMemo(() => {
+    if (!openingTries) return null
+    const bundle = openingTries.find((b) => b.openingId === selectedOpeningId)
+    if (!bundle) return null
+
+    const total = bundle.trie.w + bundle.trie.d + bundle.trie.b
+    if (total === 0) return null
+
+    return {
+      white: (bundle.trie.w / total) * 100,
+      draw: (bundle.trie.d / total) * 100,
+      black: (bundle.trie.b / total) * 100,
+      total,
+    }
+  }, [openingTries, selectedOpeningId])
 
   useEffect(() => {
     let cancelled = false
@@ -664,7 +696,7 @@ function App() {
             </button>
 
             <div className="hero-copy">
-              <p className="eyebrow">Phase 2 opening explorer</p>
+              <p className="eyebrow">Chess Opening Visualization</p>
               <h1>Play legal moves and compare heatmaps to real-game continuations.</h1>
               <p className="hero-description">
                 Start from a curated opening, move pieces legally on the board, and
@@ -717,6 +749,7 @@ function App() {
           <p className="eyebrow" style={{ margin: 0 }}>Opening profile</p>
           <strong className="profile-bar-name">{selectedOpening.name}</strong>
           <span className="detail-badge">{selectedOpening.eco}</span>
+          <span className="detail-badge subtle">{openingColorLabel}</span>
           <span className="dropdown-chevron" style={{ marginLeft: 'auto', fontSize: '0.9rem' }}>
             {isProfileOpen ? '▲' : '▼'}
           </span>
@@ -743,7 +776,45 @@ function App() {
                 </ul>
               </div>
               <div className="drawer-section">
-                <h3>Current line</h3>
+                <h3>Win rate</h3>
+                {openingStats ? (
+                  <div className="opening-winrate">
+                    <div className="opening-winrate-bar">
+                      <div className="opening-winrate-segment opening-winrate-white" style={{ width: `${openingStats.white}%` }}>
+                        {openingStats.white > 10 ? `${Math.round(openingStats.white)}%` : ''}
+                      </div>
+                      <div className="opening-winrate-segment opening-winrate-draw" style={{ width: `${openingStats.draw}%` }}>
+                        {openingStats.draw > 10 ? `${Math.round(openingStats.draw)}%` : ''}
+                      </div>
+                      <div className="opening-winrate-segment opening-winrate-black" style={{ width: `${openingStats.black}%` }}>
+                        {openingStats.black > 10 ? `${Math.round(openingStats.black)}%` : ''}
+                      </div>
+                    </div>
+                    <div className="opening-winrate-legend">
+                      <div className="opening-winrate-legend-item">
+                        <div className="opening-winrate-dot opening-winrate-dot-white"></div>
+                        <span>White</span>
+                      </div>
+                      <div className="opening-winrate-legend-item">
+                        <div className="opening-winrate-dot opening-winrate-dot-draw"></div>
+                        <span>Draw</span>
+                      </div>
+                      <div className="opening-winrate-legend-item">
+                        <div className="opening-winrate-dot opening-winrate-dot-black"></div>
+                        <span>Black</span>
+                      </div>
+                    </div>
+                    <p className="detail-copy" style={{ fontSize: '0.85rem', marginTop: '0.2rem' }}>
+                      Based on {openingStats.total.toLocaleString()} games.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="detail-copy" style={{ fontSize: '0.85rem' }}>
+                    Load PGN data to see win rates.
+                  </p>
+                )}
+
+                <h3 style={{ marginTop: '1.25rem' }}>Current line</h3>
                 <p className="move-line">{formatMoveLine(currentLine)}</p>
               </div>
             </div>
@@ -808,6 +879,15 @@ function App() {
                   title="Whole board"
                 >
                   ♙♟
+                </button>
+                <button
+                  type="button"
+                  className={`mode-button ${mode === 'none' ? 'active' : ''}`}
+                  onClick={() => setMode('none')}
+                  title="No heatmap"
+                  style={{ fontSize: '1.1rem', fontWeight: 600, padding: '0.3rem 0.9rem' }}
+                >
+                  ✕
                 </button>
               </div>
               <p className="toolbar-description">{MODE_COPY[mode].description}</p>
@@ -901,6 +981,7 @@ function App() {
               onSelectSquare={handleSelectSquare}
               pieceEmphasisMap={pieceEmphasisMap}
               importantSquares={importantSquares}
+              flipped={isFlipped}
             />
 
             <div className="board-actions">
@@ -1104,6 +1185,7 @@ function App() {
                       legalTargets={[]}
                       pieceEmphasisMap={{}}
                       previewArrow={enginePreview.arrow}
+                      flipped={isFlipped}
                     />
                     <div className="move-buttons engine-preview-actions">
                       <button
@@ -1339,6 +1421,7 @@ function App() {
                     pieceEmphasisMap={pieceEmphasisMap}
                     importantSquares={importantSquares}
                     size={440}
+                    flipped={isFlipped}
                   />
                   <div className="board-actions" style={{ marginTop: '0.75rem' }}>
                     <button type="button" className="action-button" onClick={handleReset}>

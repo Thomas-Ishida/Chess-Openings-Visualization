@@ -13,7 +13,8 @@ export const BOARD_SQUARES = RANKS.flatMap((rank) =>
   FILES.map((file) => `${file}${rank}` as Square),
 )
 
-export type HeatmapMode = 'white' | 'black' | 'difference'
+// Add 'none' to the HeatmapMode type
+export type HeatmapMode = 'white' | 'black' | 'difference' | 'none'
 export type PieceEmphasisMode = 'off' | 'continuation' | 'control' | 'both'
 
 export interface OpeningDefinition {

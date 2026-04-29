@@ -33,6 +33,7 @@ interface ChessHeatmapBoardProps {
     color: string
     strength: number
   }>
+  flipped?: boolean
 }
 
 const BOARD_MARGIN = 28
@@ -86,6 +87,7 @@ export function ChessHeatmapBoard({
   previewArrow = null,
   previewDestination = null,
   importantSquares = [],
+  flipped = false,
 }: ChessHeatmapBoardProps) {
   const svgRef = useRef<SVGSVGElement | null>(null)
 
@@ -97,8 +99,22 @@ export function ChessHeatmapBoard({
     const totalSize = size + BOARD_MARGIN * 2
     const squareSize = size / 8
     const svg = d3.select(svgRef.current)
-    const fileLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] as const
-    const rankLabels = ['8', '7', '6', '5', '4', '3', '2', '1'] as const
+    
+    // Manage labels dynamically based on flip orientation
+    const fileLabels = flipped 
+      ? ['h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'] 
+      : ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+    
+    const rankLabels = flipped 
+      ? ['1', '2', '3', '4', '5', '6', '7', '8'] 
+      : ['8', '7', '6', '5', '4', '3', '2', '1']
+
+    // Helper to resolve coordinates whether standard or flipped
+    const getDisplayCoords = (x: number, y: number) => {
+      return flipped
+        ? { displayX: (7 - x) * squareSize, displayY: y * squareSize }
+        : { displayX: x * squareSize, displayY: (7 - y) * squareSize }
+    }
 
     svg.selectAll('*').remove()
     svg.attr('viewBox', `0 0 ${totalSize} ${totalSize}`)
@@ -109,13 +125,13 @@ export function ChessHeatmapBoard({
 
     const boardSquares: BoardSquareDatum[] = BOARD_SQUARES.map((square) => {
       const coordinates = squareToCoordinates(square)
-      const displayRank = 7 - coordinates.y
+      const { displayX, displayY } = getDisplayCoords(coordinates.x, coordinates.y)
       const control = snapshot.controlMap[square]
 
       return {
         square,
-        x: coordinates.x * squareSize,
-        y: displayRank * squareSize,
+        x: displayX,
+        y: displayY,
         coordinates,
         control,
       }
@@ -126,11 +142,12 @@ export function ChessHeatmapBoard({
     )
     const pieceData: PieceDatum[] = snapshot.pieces.map((piece) => {
       const coordinates = squareToCoordinates(piece.square)
+      const { displayX, displayY } = getDisplayCoords(coordinates.x, coordinates.y)
 
       return {
         ...piece,
-        displayX: coordinates.x * squareSize + squareSize / 2,
-        displayY: (7 - coordinates.y) * squareSize + squareSize * 0.69,
+        displayX: displayX + squareSize / 2,
+        displayY: displayY + squareSize * 0.69,
         emphasis: pieceEmphasisMap[piece.square] ?? 1,
       }
     })
@@ -286,10 +303,14 @@ export function ChessHeatmapBoard({
       const from = squareToCoordinates(previewArrow.from)
       const to = squareToCoordinates(previewArrow.to)
       const arrowColor = previewArrow.color ?? '#7c3aed'
-      const startX = from.x * squareSize + squareSize / 2
-      const startY = (7 - from.y) * squareSize + squareSize / 2
-      const endX = to.x * squareSize + squareSize / 2
-      const endY = (7 - to.y) * squareSize + squareSize / 2
+      
+      const fromCoords = getDisplayCoords(from.x, from.y)
+      const toCoords = getDisplayCoords(to.x, to.y)
+      
+      const startX = fromCoords.displayX + squareSize / 2
+      const startY = fromCoords.displayY + squareSize / 2
+      const endX = toCoords.displayX + squareSize / 2
+      const endY = toCoords.displayY + squareSize / 2
 
       const defs = root.append('defs')
       defs
@@ -414,6 +435,7 @@ export function ChessHeatmapBoard({
     }
 
     function getSquareOpacity(control: SquareControl) {
+      if (mode === 'none') return 0 // Hide heatmap if mode is none
       if (mode === 'white') {
         return control.whiteCount === 0 ? 0 : intensityScale(control.whiteCount)
       }
@@ -437,6 +459,7 @@ export function ChessHeatmapBoard({
     selectedSquare,
     size,
     snapshot,
+    flipped,
   ])
 
   return (
