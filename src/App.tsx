@@ -21,10 +21,7 @@ import {
   type SquareControl,
 } from './lib/chess-heatmap'
 import {
-  fetchBookContinuations,
   fetchEngineSuggestions,
-  type BookLookupResult,
-  type ContinuationMove,
   type EngineSuggestion,
 } from './lib/explorer-api'
 import {
@@ -35,11 +32,16 @@ import {
   saveParsedFileCache,
   removeParsedFileCache,
 } from './lib/pgn-parser'
-import type { OpeningTrieBundle, PgnProgressSnapshot } from './lib/opening-tree-types'
+import type {
+  OpeningTreeBranch,
+  OpeningTrieBundle,
+  PgnProgressSnapshot,
+} from './lib/opening-tree-types'
 
 const openings = openingsData as OpeningDefinition[]
 const DEFAULT_PGN_FILE_NAME = 'lichess_elite_2025-11-top50-capped-1000.pgn'
 
+// Updated MODE_COPY to handle 'none'
 const MODE_COPY: Record<
   HeatmapMode,
   { label: string; description: string; summary: string }
@@ -59,6 +61,11 @@ const MODE_COPY: Record<
     description:
       'Blue favors White, orange favors Black, and muted gray marks balanced control.',
     summary: 'This mode reveals neutral zones and the side that owns more space overall.',
+  },
+  none: {
+    label: 'No heatmap',
+    description: 'Shows the standard chessboard without any control overlays.',
+    summary: 'Standard view.',
   },
 }
 
@@ -85,11 +92,6 @@ function App() {
   const [hoveredSquare, setHoveredSquare] = useState<SquareControl | null>(null)
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null)
   const [userMoves, setUserMoves] = useState<string[]>([])
-  const [bookData, setBookData] = useState<BookLookupResult | null>(null)
-  const [bookStatus, setBookStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>(
-    'idle',
-  )
-  const [bookError, setBookError] = useState<string | null>(null)
   const [engineData, setEngineData] = useState<Awaited<
     ReturnType<typeof fetchEngineSuggestions>
   > | null>(null)
@@ -137,6 +139,32 @@ function App() {
 
     return sanMoves
   }, [selectedOpening, userMoves])
+
+  const openingColorLabel = useMemo(() => {
+    const isBlackOpening =
+      selectedOpening.name.includes('Defense') ||
+      selectedOpening.name.includes('Declined')
+    return isBlackOpening ? "Black's opening" : "White's opening"
+  }, [selectedOpening.name])
+  
+  // Calculate if the board should be flipped
+  const isFlipped = openingColorLabel === "Black's opening"
+
+  const openingStats = useMemo(() => {
+    if (!openingTries) return null
+    const bundle = openingTries.find((b) => b.openingId === selectedOpeningId)
+    if (!bundle) return null
+
+    const total = bundle.trie.w + bundle.trie.d + bundle.trie.b
+    if (total === 0) return null
+
+    return {
+      white: (bundle.trie.w / total) * 100,
+      draw: (bundle.trie.d / total) * 100,
+      black: (bundle.trie.b / total) * 100,
+      total,
+    }
+  }, [openingTries, selectedOpeningId])
 
   useEffect(() => {
     let cancelled = false
@@ -215,56 +243,11 @@ function App() {
   useEffect(() => {
     const controller = new AbortController()
 
-    async function loadBook() {
-      setBookStatus('loading')
-      setBookError(null)
-      setBookData(null)
-      setEngineData(null)
-      setEngineStatus('idle')
-      setEngineError(null)
-      setSelectedEngineIndex(0)
-
-      try {
-        const result = await fetchBookContinuations(snapshot.fen, currentLine, {
-          depth: 3,
-          moves: 5,
-          signal: controller.signal,
-        })
-
-        if (controller.signal.aborted) return
-
-        if (result) {
-          setBookData(result)
-          setBookStatus('ready')
-          return
-        }
-
-        setBookData(null)
-        setBookStatus('ready')
-      } catch (error) {
-        if (controller.signal.aborted) return
-
-        setBookStatus('error')
-        setBookError(error instanceof Error ? error.message : 'Book lookup failed.')
-      }
-    }
-
-    void loadBook()
-
-    return () => {
-      controller.abort()
-    }
-  }, [currentLine, snapshot.fen])
-
-  useEffect(() => {
-    if (bookStatus !== 'ready' || bookData) return
-
-    const controller = new AbortController()
-
     async function loadEngine() {
       setEngineStatus('loading')
       setEngineError(null)
       setEngineData(null)
+      setSelectedEngineIndex(0)
 
       try {
         const result = await fetchEngineSuggestions(snapshot.fen, controller.signal)
@@ -293,7 +276,7 @@ function App() {
     return () => {
       controller.abort()
     }
-  }, [bookData, bookStatus, snapshot.fen])
+  }, [snapshot.fen])
 
   const whiteCoverage = useMemo(
     () => snapshot.controls.filter((control) => control.whiteCount > 0).length,
@@ -316,6 +299,24 @@ function App() {
     [snapshot.controls],
   )
 
+  const pgnTreeBranchesAtTabiya = useMemo(
+    () => buildOpeningTreeBranches(selectedOpening, openingTries, []),
+    [openingTries, selectedOpening],
+  )
+  const pgnBranchesAtPosition = useMemo(
+    () => buildOpeningTreeBranches(selectedOpening, openingTries, userMoves),
+    [openingTries, selectedOpening, userMoves],
+  )
+  const inBook = pgnBranchesAtPosition.length > 0
+  const canUndo = userMoves.length > 0
+  const resolvedSuggestionSource = useMemo(() => {
+    if (suggestionSourceMode === 'statistics') return inBook ? 'statistics' : 'none'
+    if (suggestionSourceMode === 'engine') return engineData ? 'engine' : 'none'
+    if (inBook) return 'statistics'
+    if (engineData) return 'engine'
+    return 'none'
+  }, [engineData, inBook, suggestionSourceMode])
+
   const legalMovesFromSelection = useMemo(
     () =>
       selectedSquare ? getLegalMovesForSquare(snapshot, selectedSquare) : [],
@@ -328,32 +329,33 @@ function App() {
 
   const continuationScores = useMemo(() => {
     const scores: Partial<Record<Square, number>> = {}
-    const moves = bookData?.moves ?? []
+    const branches = pgnBranchesAtPosition
 
-    if (moves.length === 0) return scores
+    if (branches.length === 0) return scores
 
     let maxScore = 0
 
-    for (const move of moves) {
-      const legalMove = snapshot.legalMoves.find((candidate) => candidate.uci === move.uci)
+    for (const branch of branches) {
+      const legalMove = snapshot.legalMoves.find((candidate) => candidate.uci === branch.uci)
 
       if (legalMove) {
-        scores[legalMove.from] = (scores[legalMove.from] ?? 0) + move.percentage
+        scores[legalMove.from] = (scores[legalMove.from] ?? 0) + branch.frequency
         maxScore = Math.max(maxScore, scores[legalMove.from] ?? 0)
-        for (const child of move.children) {
-          const childChess = createChessFromOpening(selectedOpening, userMoves)
+      }
 
-          if (!applyUciMove(childChess, move.uci)) continue
+      for (const child of branch.children) {
+        const childChess = createChessFromOpening(selectedOpening, userMoves)
 
-          const childSnapshot = buildPositionSnapshotFromChess(childChess)
-          const childMove = childSnapshot.legalMoves.find(
-            (candidate) => candidate.uci === child.uci,
-          )
+        if (!applyUciMove(childChess, branch.uci)) continue
 
-          if (childMove) {
-            scores[childMove.from] = (scores[childMove.from] ?? 0) + child.percentage
-            maxScore = Math.max(maxScore, scores[childMove.from] ?? 0)
-          }
+        const childSnapshot = buildPositionSnapshotFromChess(childChess)
+        const childMove = childSnapshot.legalMoves.find(
+          (candidate) => candidate.uci === child.uci,
+        )
+
+        if (childMove) {
+          scores[childMove.from] = (scores[childMove.from] ?? 0) + child.frequency * 0.5
+          maxScore = Math.max(maxScore, scores[childMove.from] ?? 0)
         }
       }
     }
@@ -363,7 +365,7 @@ function App() {
     return Object.fromEntries(
       Object.entries(scores).map(([square, score]) => [square, score / maxScore]),
     ) as Partial<Record<Square, number>>
-  }, [bookData, selectedOpening, snapshot.legalMoves, userMoves])
+  }, [pgnBranchesAtPosition, selectedOpening, snapshot.legalMoves, userMoves])
 
   const controlScores = useMemo(() => {
     const scores: Partial<Record<Square, number>> = {}
@@ -406,24 +408,6 @@ function App() {
     ) as Partial<Record<Square, number>>
   }, [continuationScores, controlScores, pieceEmphasisMode, snapshot.pieces])
 
-  const inBook = Boolean(bookData && bookData.moves.length > 0)
-  const pgnTreeBranchesAtTabiya = useMemo(
-    () => buildOpeningTreeBranches(selectedOpening, openingTries, []),
-    [openingTries, selectedOpening],
-  )
-  const pgnBranchesAtPosition = useMemo(
-    () => buildOpeningTreeBranches(selectedOpening, openingTries, userMoves),
-    [openingTries, selectedOpening, userMoves],
-  )
-  const canUndo = userMoves.length > 0
-  const resolvedSuggestionSource = useMemo(() => {
-    if (suggestionSourceMode === 'statistics') return inBook ? 'statistics' : 'none'
-    if (suggestionSourceMode === 'engine') return engineData ? 'engine' : 'none'
-    if (inBook) return 'statistics'
-    if (engineData) return 'engine'
-    return 'none'
-  }, [engineData, inBook, suggestionSourceMode])
-  
   const selectedEngineSuggestion = useMemo(
     () => engineData?.suggestions[selectedEngineIndex] ?? engineData?.suggestions[0] ?? null,
     [engineData, selectedEngineIndex],
@@ -552,7 +536,7 @@ function App() {
     setSelectedSquare(null)
   }
 
-  function handleApplyContinuation(move: ContinuationMove) {
+  function handleApplyContinuation(move: OpeningTreeBranch) {
     const legalMove = snapshot.legalMoves.find((candidate) => candidate.uci === move.uci)
 
     if (!legalMove) return
@@ -712,7 +696,7 @@ function App() {
             </button>
 
             <div className="hero-copy">
-              <p className="eyebrow">Phase 2 opening explorer</p>
+              <p className="eyebrow">Chess Opening Visualization</p>
               <h1>Play legal moves and compare heatmaps to real-game continuations.</h1>
               <p className="hero-description">
                 Start from a curated opening, move pieces legally on the board, and
@@ -765,6 +749,7 @@ function App() {
           <p className="eyebrow" style={{ margin: 0 }}>Opening profile</p>
           <strong className="profile-bar-name">{selectedOpening.name}</strong>
           <span className="detail-badge">{selectedOpening.eco}</span>
+          <span className="detail-badge subtle">{openingColorLabel}</span>
           <span className="dropdown-chevron" style={{ marginLeft: 'auto', fontSize: '0.9rem' }}>
             {isProfileOpen ? '▲' : '▼'}
           </span>
@@ -791,7 +776,45 @@ function App() {
                 </ul>
               </div>
               <div className="drawer-section">
-                <h3>Current line</h3>
+                <h3>Win rate</h3>
+                {openingStats ? (
+                  <div className="opening-winrate">
+                    <div className="opening-winrate-bar">
+                      <div className="opening-winrate-segment opening-winrate-white" style={{ width: `${openingStats.white}%` }}>
+                        {openingStats.white > 10 ? `${Math.round(openingStats.white)}%` : ''}
+                      </div>
+                      <div className="opening-winrate-segment opening-winrate-draw" style={{ width: `${openingStats.draw}%` }}>
+                        {openingStats.draw > 10 ? `${Math.round(openingStats.draw)}%` : ''}
+                      </div>
+                      <div className="opening-winrate-segment opening-winrate-black" style={{ width: `${openingStats.black}%` }}>
+                        {openingStats.black > 10 ? `${Math.round(openingStats.black)}%` : ''}
+                      </div>
+                    </div>
+                    <div className="opening-winrate-legend">
+                      <div className="opening-winrate-legend-item">
+                        <div className="opening-winrate-dot opening-winrate-dot-white"></div>
+                        <span>White</span>
+                      </div>
+                      <div className="opening-winrate-legend-item">
+                        <div className="opening-winrate-dot opening-winrate-dot-draw"></div>
+                        <span>Draw</span>
+                      </div>
+                      <div className="opening-winrate-legend-item">
+                        <div className="opening-winrate-dot opening-winrate-dot-black"></div>
+                        <span>Black</span>
+                      </div>
+                    </div>
+                    <p className="detail-copy" style={{ fontSize: '0.85rem', marginTop: '0.2rem' }}>
+                      Based on {openingStats.total.toLocaleString()} games.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="detail-copy" style={{ fontSize: '0.85rem' }}>
+                    Load PGN data to see win rates.
+                  </p>
+                )}
+
+                <h3 style={{ marginTop: '1.25rem' }}>Current line</h3>
                 <p className="move-line">{formatMoveLine(currentLine)}</p>
               </div>
             </div>
@@ -816,9 +839,6 @@ function App() {
                   setUserMoves([])
                   setHoveredSquare(null)
                   setSelectedSquare(null)
-                  setBookData(null)
-                  setBookStatus('idle')
-                  setBookError(null)
                   setEngineData(null)
                   setEngineStatus('idle')
                   setEngineError(null)
@@ -835,7 +855,7 @@ function App() {
 
             <div className="sidebar-group">
               <span className="toolbar-label">Heatmap mode</span>
-              <div className="mode-toggle piece-toggle" role="tablist" aria-label="Heatmap modes">
+              <div className="mode-toggle" role="tablist" aria-label="Heatmap modes">
                 <button
                   type="button"
                   className={`mode-button piece-btn ${mode === 'white' ? 'active' : ''}`}
@@ -859,6 +879,15 @@ function App() {
                   title="Whole board"
                 >
                   ♙♟
+                </button>
+                <button
+                  type="button"
+                  className={`mode-button ${mode === 'none' ? 'active' : ''}`}
+                  onClick={() => setMode('none')}
+                  title="No heatmap"
+                  style={{ fontSize: '1.1rem', fontWeight: 600, padding: '0.3rem 0.9rem' }}
+                >
+                  ✕
                 </button>
               </div>
               <p className="toolbar-description">{MODE_COPY[mode].description}</p>
@@ -952,6 +981,7 @@ function App() {
               onSelectSquare={handleSelectSquare}
               pieceEmphasisMap={pieceEmphasisMap}
               importantSquares={importantSquares}
+              flipped={isFlipped}
             />
 
             <div className="board-actions">
@@ -1032,10 +1062,10 @@ function App() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span className={`detail-badge ${inBook ? 'in-book' : 'out-of-book'}`}>
-                    {bookStatus === 'loading'
-                      ? 'Loading book data'
+                    {isDefaultPgnLoading
+                      ? 'Loading PGN'
                       : resolvedSuggestionSource === 'statistics'
-                        ? 'Live book'
+                        ? 'PGN stats'
                         : resolvedSuggestionSource === 'engine'
                           ? 'Engine'
                           : 'No data'}
@@ -1059,7 +1089,7 @@ function App() {
               ))}
             </div>
 
-            {suggestionSourceMode === 'statistics' && !inBook && bookStatus === 'ready' ? (
+            {suggestionSourceMode === 'statistics' && !inBook && !isDefaultPgnLoading ? (
               <p className="detail-copy">
                 No statistical suggestions are available for this position. Switch to Engine
                 or Auto to see engine analysis.
@@ -1069,24 +1099,24 @@ function App() {
               engineStatus !== 'loading' ? (
               <p className="detail-copy">
                 No cloud engine evaluation is available for this position. Switch to
-                Statistics or Auto if opening-book data exists.
+                Statistics or Auto if PGN tree data exists.
               </p>
-            ) : bookStatus === 'loading' && suggestionSourceMode !== 'engine' ? (
-              <p className="detail-copy">Looking up real-game continuations for this position.</p>
-            ) : bookStatus === 'error' && suggestionSourceMode !== 'engine' ? (
+            ) : isDefaultPgnLoading && suggestionSourceMode !== 'engine' ? (
+              <p className="detail-copy">Loading PGN tree data for statistical suggestions.</p>
+            ) : pgnError && suggestionSourceMode !== 'engine' ? (
               <p className="error-text">
-                {bookError ?? 'The real-game continuation service could not be reached.'}
+                {pgnError ?? 'The PGN dataset could not be processed.'}
               </p>
-            ) : resolvedSuggestionSource === 'statistics' && inBook && bookData ? (
+            ) : resolvedSuggestionSource === 'statistics' && inBook ? (
               <div className="continuation-list">
-                {bookData.moves.map((move) => (
+                {pgnBranchesAtPosition.map((move) => (
                   <article key={move.uci} className="continuation-card">
                     <div className="card-row">
                       <div>
                         <h3>{move.san}</h3>
-                        <p className="detail-copy">{move.gameCount.toLocaleString()} games</p>
+                        <p className="detail-copy">{move.games.toLocaleString()} games</p>
                       </div>
-                      <span className="percentage-pill">{move.percentage.toFixed(1)}%</span>
+                      <span className="percentage-pill">{move.frequency.toFixed(1)}%</span>
                     </div>
                     <div className="line-row">
                       <div className="move-buttons">
@@ -1099,14 +1129,15 @@ function App() {
                         </button>
                       </div>
                       <div className="detail-copy">
-                        W {move.white} / D {move.draws} / B {move.black}
+                        W {move.winRate[0].toFixed(0)} / D {move.winRate[1].toFixed(0)} / B{' '}
+                        {move.winRate[2].toFixed(0)}
                       </div>
                     </div>
                     {move.children.length > 0 ? (
                       <ul className="subline-list">
                         {move.children.map((child) => (
                           <li key={`${move.uci}-${child.uci}`}>
-                            <strong>{child.san}</strong> - {child.percentage.toFixed(1)}%
+                            <strong>{child.san}</strong> - {child.frequency.toFixed(1)}%
                           </li>
                         ))}
                       </ul>
@@ -1154,6 +1185,7 @@ function App() {
                       legalTargets={[]}
                       pieceEmphasisMap={{}}
                       previewArrow={enginePreview.arrow}
+                      flipped={isFlipped}
                     />
                     <div className="move-buttons engine-preview-actions">
                       <button
@@ -1216,6 +1248,49 @@ function App() {
             </>
             )}
           </section>
+
+          {pieceEmphasisMode !== 'off' ? (
+            <section className="detail-card">
+              <div className="detail-group-header">
+                <h3>{keyPieceTitle}</h3>
+                <span className="source-label blue">
+                  {pieceEmphasisMode === 'continuation'
+                    ? 'Based on tree continuation percentages'
+                    : pieceEmphasisMode === 'control'
+                      ? 'Based on current board control'
+                      : 'Blending tree continuation and control'}
+                </span>
+              </div>
+              {keyPieces.length > 0 ? (
+                <div className="key-piece-list">
+                  {keyPieces.map((entry) => (
+                    <div key={entry.piece.square} className="key-piece-row">
+                      <div className="key-piece-copy">
+                        <strong>
+                          {describePiece(entry.piece.type)} on {entry.piece.square}
+                        </strong>
+                        <span className="detail-copy">
+                          {pieceEmphasisMode === 'continuation'
+                            ? `${(entry.continuationScore * 100).toFixed(0)}% of local continuations involve this piece`
+                            : pieceEmphasisMode === 'control'
+                              ? `${(entry.controlScore * 100).toFixed(0)}% control contribution`
+                              : `${(entry.score * 100).toFixed(0)}% blended relevance`}
+                        </span>
+                      </div>
+                      <span className="score-pill">
+                        {(entry.score * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="detail-copy">
+                  No standout pieces were identified for this emphasis mode in the current
+                  position.
+                </p>
+              )}
+            </section>
+          ) : null}
 
           <section className="detail-card">
             <div className="section-heading">
@@ -1346,6 +1421,7 @@ function App() {
                     pieceEmphasisMap={pieceEmphasisMap}
                     importantSquares={importantSquares}
                     size={440}
+                    flipped={isFlipped}
                   />
                   <div className="board-actions" style={{ marginTop: '0.75rem' }}>
                     <button type="button" className="action-button" onClick={handleReset}>
