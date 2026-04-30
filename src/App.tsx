@@ -921,15 +921,6 @@ function App() {
                 multiple
                 onChange={(event) => void handleLoadPgnFiles(event.target.files)}
               />
-              <div className="mode-toggle">
-                <button
-                  type="button"
-                  className={`mode-button ${openingTreeEnabled ? 'active' : ''}`}
-                  onClick={() => setOpeningTreeEnabled((enabled) => !enabled)}
-                >
-                  {openingTreeEnabled ? 'Tree on' : 'Tree off'}
-                </button>
-              </div>
               <div className="toolbar-description">
                 {loadedPgnFiles.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
@@ -1035,15 +1026,13 @@ function App() {
             </p>
           </div>
 
-          {openingTreeEnabled ? (
-            <button
-              type="button"
-              className="decision-tree-button"
-              onClick={() => setIsDecisionTreeOpen(true)}
-            >
-              Decision Tree
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className="decision-tree-button"
+            onClick={() => setIsDecisionTreeOpen(true)}
+          >
+            Decision Tree
+          </button>
         </section>
 
         {/* Right: continuation explorer + square inspector */}

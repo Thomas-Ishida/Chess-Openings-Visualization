@@ -166,7 +166,7 @@
   display: grid;
   gap: 1.5rem;
   grid-template-columns: minmax(240px, 18%) minmax(0, 1fr) minmax(280px, 22%);
-  align-items: start;
+  align-items: stretch;
 }
 
 /* ── Left sidebar ──────────────────────────────────────────────────────── */
@@ -184,6 +184,7 @@
   flex-direction: column;
   gap: 1.25rem;
   flex: 1;
+  overflow-y: auto;
 }
 
 .sidebar-group {
@@ -230,12 +231,16 @@
   flex-direction: column;
   gap: 1.25rem;
   align-items: center;
+  align-self: start;
 }
 
 .board-card {
   width: 100%;
   padding: 1.4rem;
   border-radius: 1.6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 /* ── Right detail column ───────────────────────────────────────────────── */
@@ -381,6 +386,8 @@
   gap: 1rem;
   align-items: center;
   margin-top: 1rem;
+  width: 100%;
+  max-width: min(calc(100dvh - 180px), 100%);
 }
 
 .section-heading {
@@ -428,6 +435,9 @@
 .chess-heatmap-board {
   width: 100%;
   height: auto;
+  /* Board is square — capping max-width also caps height.
+     380px = profile bar + padding + actions/legend/note + decision-tree btn + gaps */
+  max-width: min(calc(100dvh - 180px), 100%);
   border-radius: 1.5rem;
   background: linear-gradient(180deg, #fafaf9, #f5f5f4);
 }
@@ -437,6 +447,8 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.85rem;
   margin-top: 1rem;
+  width: 100%;
+  max-width: min(calc(100dvh - 180px), 100%);
 }
 
 .legend-ramp {
@@ -455,6 +467,8 @@
   margin-top: 0.5rem;
   color: #64748b;
   font-size: 0.85rem;
+  width: 100%;
+  max-width: min(calc(100dvh - 180px), 100%);
 }
 
 /* ── Metric cards ──────────────────────────────────────────────────────── */
@@ -768,7 +782,7 @@ input[type='file'] { font-size: 0.9rem; color: #334155; }
   width: 100%;
   margin-top: 0.75rem;
   padding: 0.95rem 1.5rem;
-  background: linear-gradient(135deg, #ffffff, #ffffff);
+  background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #1c1000;
   font-size: 1rem;
   font-weight: 800;
@@ -777,20 +791,23 @@ input[type='file'] { font-size: 0.9rem; color: #334155; }
   border: none;
   border-radius: 14px;
   cursor: pointer;
-  box-shadow: 0 32px 64px rgba(15, 23, 42, 0.22);
+  box-shadow:
+    0 4px 0 #b45309,
+    0 8px 24px rgba(217, 119, 6, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
-/* 
+
 .decision-tree-button::before {
   content: '♟';
   font-size: 1.2rem;
-} */
+}
 
-/* .decision-tree-button:hover {
+.decision-tree-button:hover {
   transform: translateY(-2px);
   box-shadow:
     0 6px 0 #b45309,
     0 14px 32px rgba(217, 119, 6, 0.4);
-} */
+}
 
 .decision-tree-button:active {
   transform: translateY(2px);
