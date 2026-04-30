@@ -165,7 +165,7 @@
 .content-grid {
   display: grid;
   gap: 1.5rem;
-  grid-template-columns: 270px minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(240px, 18%) minmax(0, 1fr) minmax(280px, 22%);
   align-items: start;
 }
 
@@ -174,6 +174,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  height: 100%;
 }
 
 .sidebar-card {
@@ -182,6 +183,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  flex: 1;
 }
 
 .sidebar-group {
@@ -921,7 +923,7 @@ input[type='file'] { font-size: 0.9rem; color: #334155; }
 /* ── Responsive ────────────────────────────────────────────────────────── */
 @media (max-width: 1200px) {
   .content-grid {
-    grid-template-columns: 200px minmax(0, 1fr) 280px;
+    grid-template-columns: minmax(200px, 20%) minmax(0, 1fr) minmax(240px, 24%);
   }
 }
 

@@ -58,9 +58,9 @@ code {
 }
 
 #root {
-  width: min(1320px, 100%);
+  width: 100%;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1.5rem 2rem;
 }
 
 @media (max-width: 720px) {
