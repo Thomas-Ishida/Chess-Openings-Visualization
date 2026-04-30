@@ -61,10 +61,12 @@ code {
   width: 100%;
   margin: 0 auto;
   padding: 1.5rem 2rem;
+  --root-pad-y: 3rem;
 }
 
 @media (max-width: 720px) {
   #root {
     padding: 1rem;
+    --root-pad-y: 2rem;
   }
 }

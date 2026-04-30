@@ -1020,15 +1020,17 @@ function App() {
             </p>
           </div>
 
-          {openingTreeEnabled ? (
-            <button
-              type="button"
-              className="decision-tree-button"
-              onClick={() => setIsDecisionTreeOpen(true)}
-            >
-              Decision Tree
-            </button>
-          ) : null}
+          <div className="decision-tree-row">
+            {openingTreeEnabled ? (
+              <button
+                type="button"
+                className="decision-tree-button"
+                onClick={() => setIsDecisionTreeOpen(true)}
+              >
+                Decision Tree
+              </button>
+            ) : null}
+          </div>
         </section>
 
         {/* Right: continuation explorer + square inspector */}
