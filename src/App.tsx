@@ -102,7 +102,6 @@ function App() {
   const [selectedEngineIndex, setSelectedEngineIndex] = useState(0)
   const [suggestionSourceMode, setSuggestionSourceMode] =
     useState<SuggestionSourceMode>('auto')
-  const [openingTreeEnabled, setOpeningTreeEnabled] = useState(true)
   const [openingTries, setOpeningTries] = useState<OpeningTrieBundle[] | null>(null)
   const [pgnProgress, setPgnProgress] = useState<PgnProgressSnapshot[]>([])
   const [loadedPgnFiles, setLoadedPgnFiles] = useState<string[]>([])
@@ -114,6 +113,8 @@ function App() {
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(true)
   const [isDecisionTreeOpen, setIsDecisionTreeOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+
+  const openingTreeEnabled = openingTries !== null
 
   const selectedOpening = useMemo(
     () =>
@@ -178,7 +179,6 @@ function App() {
         const fromCache = loadParsedFileCache(DEFAULT_PGN_FILE_NAME)
         if (fromCache) {
           if (cancelled) return
-          setOpeningTreeEnabled(true)
           setOpeningTries(fromCache.bundles)
           setLoadedPgnFiles([DEFAULT_PGN_FILE_NAME])
           setPgnTotalGames(fromCache.totalGames)
@@ -207,7 +207,6 @@ function App() {
         saveParsedFileCache(DEFAULT_PGN_FILE_NAME, parsed.bundles, parsed.totalGames)
 
         if (cancelled) return
-        setOpeningTreeEnabled(true)
         setOpeningTries(parsed.bundles)
         setLoadedPgnFiles([DEFAULT_PGN_FILE_NAME])
         setPgnTotalGames(parsed.totalGames)
@@ -617,7 +616,6 @@ function App() {
     }
 
     if (mergedBundles) {
-      setOpeningTreeEnabled(true)
       setOpeningTries(mergedBundles)
       setLoadedPgnFiles(nextLoadedFiles)
       setPgnTotalGames(nextTotalGames)
@@ -645,10 +643,6 @@ function App() {
     setLoadedPgnFiles(nextLoadedFiles)
     setOpeningTries(mergedBundles)
     setPgnTotalGames(nextTotalGames)
-
-    if (!mergedBundles) {
-      setOpeningTreeEnabled(false)
-    }
   }
 
   function handleApplyTreePath(path: string[]) {
@@ -1026,13 +1020,15 @@ function App() {
             </p>
           </div>
 
-          <button
-            type="button"
-            className="decision-tree-button"
-            onClick={() => setIsDecisionTreeOpen(true)}
-          >
-            Decision Tree
-          </button>
+          {openingTreeEnabled ? (
+            <button
+              type="button"
+              className="decision-tree-button"
+              onClick={() => setIsDecisionTreeOpen(true)}
+            >
+              Decision Tree
+            </button>
+          ) : null}
         </section>
 
         {/* Right: continuation explorer + square inspector */}
